@@ -1,0 +1,797 @@
+.card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 6px 12px 12px 12px;
+    width: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1.5px solid #c0c0c0;
+    font-family: 'Inter', -apple-system, sans-serif;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+    cursor: pointer;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+    /* Prevents text selection while swiping */
+    -webkit-user-select: none;
+    /* iOS Safari */
+    -ms-user-select: none;
+    /* Internet Explorer/Edge */
+}
+
+@media (hover: hover) {
+    .card:hover {
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.08);
+        border-color: rgba(0, 113, 227, 0.1);
+    }
+}
+
+/* Badges */
+.cardHeader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    position: relative;
+    margin-bottom: 0px;
+}
+
+.tagsWrapperStart {
+    position: absolute;
+    top: 68px;
+    inset-inline-start: 4px;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+}
+
+.discountTagWrapper {
+    position: absolute;
+    top: 68px;
+    inset-inline-end: 4px;
+    z-index: 25;
+}
+
+.bestSellerTag {
+    background: #337c7f;
+    color: #fff;
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 4px;
+    text-transform: capitalize;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
+}
+
+.discountTag {
+    background-color: #ff3b30;
+    color: white;
+    padding: 3px 12px;
+    font-size: 9px;
+    font-weight: 800;
+    border-radius: 4px;
+    box-shadow: 0 4px 10px rgba(255, 59, 48, 0.2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    width: fit-content;
+}
+
+.dealTag {
+    padding: 3px 12px;
+    color: white;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
+    width: fit-content;
+}
+
+.weeklyTag {
+    background: #3ba1a1;
+}
+
+.limitedTag {
+    background: #eb1e24;
+}
+
+.dailyTag {
+    background: #5bb377;
+}
+
+
+/* Image Container */
+.imageContainer {
+    background: #fbfbfd;
+    border-radius: 16px;
+    width: 100%;
+    aspect-ratio: 1;
+    height: auto;
+    margin-bottom: 12px;
+    overflow: visible;
+    position: relative;
+    transition: all 0.5s ease;
+}
+
+.imageTrack {
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    border-radius: 16px;
+    position: relative;
+}
+
+.emblaContainer {
+    display: flex;
+    height: 100%;
+    will-change: transform;
+}
+
+.emblaBlocker {
+    width: 100%;
+    height: 100%;
+    touch-action: pan-y pinch-zoom;
+    pointer-events: auto;
+}
+
+.imageSlide {
+    flex: 0 0 100%;
+    min-width: 0;
+    height: 100%;
+    position: relative;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.imageSlide img {
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Normalize visual size across variant images that have inconsistent framing.
+       Forces every image to fill the same visible area instead of shrinking when
+       the source has lots of surrounding whitespace. */
+    object-fit: contain !important;
+    object-position: center;
+    padding: 14%;
+    box-sizing: border-box;
+}
+
+.navArrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(209, 209, 209, 0.8);
+    border: none;
+    width: 20px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    color: #fff;
+    padding: 0;
+}
+
+@media (hover: hover) {
+    .imageContainer:hover .navArrow {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .dotsContainer {
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .imageContainer:hover .dotsContainer {
+        opacity: 1;
+        visibility: visible;
+    }
+}
+
+.leftArrow {
+    inset-inline-start: -12px;
+    border-start-end-radius: 6px;
+    border-end-end-radius: 6px;
+}
+
+.rightArrow {
+    inset-inline-end: -12px;
+    border-start-start-radius: 6px;
+    border-end-start-radius: 6px;
+}
+
+.navArrow:hover {
+    background: rgba(180, 180, 180, 0.95);
+    color: #fff;
+}
+
+.dotsContainer {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    z-index: 10;
+}
+
+.dot {
+    width: 5px;
+    height: 5px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.activeDot {
+    width: 7px;
+    height: 7px;
+    background: #1d1d1f;
+}
+
+
+/* Timer - Glassmorphism Floating Style */
+.timerWrapper {
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 4px 12px;
+    border-radius: 100px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    white-space: nowrap;
+    z-index: 5;
+    transition: all 0.3s ease;
+}
+
+.timerWrapper svg {
+    width: 14px !important;
+    height: 14px !important;
+}
+
+@media (hover: hover) {
+    .card:hover .timerWrapper {
+        background: rgba(255, 255, 255, 0.95);
+        transform: translateX(-50%);
+        /* Fixed horizontal position without vertical lift */
+        box-shadow: 0 15px 35px rgba(255, 59, 48, 0.15);
+    }
+}
+
+.timer {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ff3b30;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5px;
+}
+
+/* Info Section */
+.info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    text-align: start;
+}
+
+.metaRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.swatchDots {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-inline-start: auto;
+}
+
+.swatchDot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    padding: 0;
+    border: 1.5px solid transparent;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+    cursor: pointer;
+    background-clip: padding-box;
+    transition: transform 0.12s, border-color 0.12s;
+}
+
+.swatchDot:hover {
+    transform: scale(1.15);
+}
+
+.swatchDotActive {
+    border-color: #16a1db;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12), 0 0 0 1px #fff;
+}
+
+.swatchDotDisabled {
+    /* still full opacity — the color itself is meaningful even without an image swap */
+}
+
+.swatchMore {
+    font-size: 9px;
+    font-weight: 600;
+    color: #6b7280;
+    line-height: 1;
+}
+
+.stockBadge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    width: fit-content;
+    white-space: nowrap;
+}
+
+.stockBadge.inStock {
+    color: #34c759;
+}
+
+.stockBadge.outOfStock {
+    color: #ff3b30;
+}
+
+.ratingBox {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    margin-bottom: 2px;
+    padding: 2px 0;
+}
+
+.stars {
+    color: #ffcc00;
+    font-size: 12px;
+    display: flex;
+    gap: 1px;
+}
+
+.reviewCount {
+    font-size: 11px;
+    color: #8e8e93;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.productName {
+    font-size: 14px;
+    font-weight: 400;
+    color: #1d1d1f;
+    margin: 0 0 2px 0;
+    line-height: 1.4;
+    min-height: 40px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+.description {
+    font-size: 13px;
+    color: #86868b;
+    line-height: 1.4;
+    margin-bottom: 0;
+    font-weight: 500;
+    min-height: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.brandLogoBox {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    padding: 0;
+    margin-inline-start: 0;
+    min-height: 32px;
+}
+
+.logoBorder {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0;
+    margin: 0;
+    /* height: 40px; */
+}
+
+.brandLogoImg {
+    max-height: 28px;
+    max-width: 130px;
+    object-fit: contain;
+    object-position: 0% 50%;
+    opacity: 0.95;
+    transition: opacity 0.3s ease;
+    margin: 0;
+    margin-inline-start: -6px;
+    padding: 0;
+    display: block;
+}
+
+.card:hover .brandLogoImg {
+    opacity: 1;
+}
+
+[dir="rtl"] .brandLogoImg {
+    object-position: 100% 50%;
+}
+
+.brandText {
+    color: #c7c7cc;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+.brandLogoOverlay {
+    position: relative;
+    margin: 2px auto 8px auto;
+    z-index: 5;
+    max-width: 280px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    background: transparent;
+}
+
+.brandLogoOverlay:hover {
+    transform: translateY(-2px) scale(1.05);
+}
+
+.logoOverlayInner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.brandLogoImgOverlay {
+    /* width:auto derives the width from the logo's real aspect ratio, which for
+       wide brand logos exceeds the container and gets clipped by .card's
+       overflow:hidden (pronounced on high-DPR/large phones like Galaxy Ultra +
+       Samsung Internet). max-width:100% keeps it inside without changing the
+       rendered size of logos that already fit — object-fit:contain then scales
+       the wide ones down in place. (Don't add height:auto here: it releases the
+       60px height the img's height attr pins, enlarging every logo.) */
+    max-height: 90px;
+    max-width: 100%;
+    width: auto;
+    object-fit: contain;
+    display: block;
+    opacity: 1;
+}
+
+.brandLogoOverlay:hover .brandLogoImgOverlay {
+    opacity: 1;
+}
+
+.brandTextOverlay {
+    color: #1d1d1f;
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+/* Pricing Section */
+.pricing {
+    margin-top: auto;
+    padding-top: 2px;
+    border-top: 1px solid #f5f5f7;
+    min-height: 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.savingsRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 2px;
+}
+
+.oldPrice {
+    text-decoration: line-through;
+    color: #8e8e93;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.percentText {
+    color: #34c759;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.currentPrice {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1d1d1f;
+    letter-spacing: -0.5px;
+}
+
+/* Action Buttons */
+.actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+.whatsappBtn {
+    width: 38px;
+    height: 38px;
+    background: #25d366;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.cartBtn {
+    flex: 1;
+    min-width: 0;
+    height: 38px;
+    padding: 0 10px;
+    background: #00aeef;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.cartBtn svg {
+    flex-shrink: 0;
+}
+
+.cartBtn span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Taller line-box + small vertical padding so Arabic descenders (ة، ل، etc.) aren't clipped. */
+    line-height: 1.8;
+    padding-block: 1px;
+}
+
+.notifyBtn {
+    background: #f59e0b;
+}
+
+.notifyBtn:hover {
+    background: #d97706;
+}
+
+.cartBtn:disabled {
+    background: #f5f5f7;
+    color: #8e8e93;
+    cursor: not-allowed;
+}
+
+/* Responsiveness */
+@media (max-width: 768px) {
+    .card {
+        padding: 10px;
+        border-radius: 20px;
+    }
+
+    .imageContainer {
+        height: 220px;
+        margin-bottom: 30px;
+    }
+
+    .imageSlide {
+        padding: 0;
+    }
+
+    .productName {
+        font-size: 14px;
+        min-height: 40px;
+    }
+
+    .brandLogoBox {
+        margin-top: 4px;
+        margin-bottom: 4px;
+        min-height: 32px;
+    }
+
+    .pricing {
+        margin-top: auto;
+        padding-top: 4px;
+        border-top: 1px solid #f5f5f7;
+        min-height: 48px;
+    }
+
+    .actions {
+        margin-top: 2px;
+        gap: 6px;
+    }
+
+    .whatsappBtn {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+    }
+
+    .cartBtn {
+        height: 40px;
+        border-radius: 10px;
+        font-size: 12px;
+        gap: 6px;
+        padding: 0 8px;
+    }
+
+    .cartBtn svg {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+@media (max-width: 576px) {
+    .card {
+        padding: 8px;
+        border-radius: 14px;
+    }
+
+    .imageContainer {
+        height: auto;
+        aspect-ratio: 1;
+        /* Keeps it square on mobile */
+        border-radius: 10px;
+        margin-bottom: 16px;
+    }
+
+    .imageSlide {
+        padding: 0;
+    }
+
+    .productName {
+        font-size: 13px;
+        min-height: 38px;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        margin-bottom: 4px;
+    }
+
+    .brandLogoBox {
+        margin-top: 2px;
+        margin-bottom: 2px;
+        min-height: 30px;
+    }
+
+    .pricing {
+        margin-top: auto;
+        padding-top: 2px;
+        border-top: 1px solid #f5f5f7;
+        min-height: 44px;
+    }
+
+    .currentPrice {
+        font-size: 16px;
+    }
+
+    .whatsappBtn {
+        width: 38px;
+        height: 38px;
+    }
+
+    .cartBtn {
+        height: 38px;
+        font-size: 11px;
+        gap: 4px;
+        padding: 0 6px;
+        letter-spacing: 0;
+    }
+
+    .cartBtn svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .timerWrapper {
+        padding: 2px 8px;
+        bottom: -12px;
+        gap: 4px;
+    }
+
+    .timerWrapper svg {
+        width: 12px !important;
+        height: 12px !important;
+    }
+
+    .timer {
+        font-size: 11px !important;
+    }
+
+    .dealTag,
+    .bestSellerTag,
+    .discountTag {
+        font-size: 9px !important;
+        padding: 2px 8px !important;
+        border-radius: 4px !important;
+        letter-spacing: 0.2px !important;
+    }
+
+    .cardHeader {
+        margin-bottom: 0px;
+    }
+
+    .brandLogoOverlay {
+        margin: 4px auto 4px auto;
+        max-width: 200px;
+    }
+
+    .brandLogoImgOverlay {
+        max-height: 65px;
+    }
+
+    .tagsWrapperStart {
+        top: 68px !important;
+        inset-inline-start: 2px !important;
+    }
+
+    .discountTagWrapper {
+        top: 68px !important;
+        inset-inline-end: 2px !important;
+    }
+
+    .description {
+        font-size: 11px !important;
+    }
+}

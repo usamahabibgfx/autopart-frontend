@@ -1,0 +1,208 @@
+.offersSection {
+    padding: 10px 0 0 0;
+    background-color: #f9fafb;
+}
+
+.container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0 60px;
+}
+
+.headerFlex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+
+.title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a202c;
+    margin: 0;
+    letter-spacing: -0.02em;
+    font-family: 'Inter', -apple-system, sans-serif;
+    text-transform: capitalize;
+}
+
+.headerActions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.mainTimer {
+    font-size: 15px;
+    font-weight: 700;
+    color: #ef4444;
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #fef2f2;
+    padding: 4px 12px;
+    border-radius: 100px;
+    border: 1px solid #fee2e2;
+    letter-spacing: 0.05em;
+    font-variant-numeric: tabular-nums;
+}
+
+.viewAll {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #086c7e;
+    text-decoration: none;
+    font-family: 'Inter', -apple-system, sans-serif;
+    transition: all 0.2s ease;
+}
+
+.viewAll:hover {
+    color: #0b8fa8;
+}
+
+.sliderWrapper {
+    position: relative;
+    width: 100%;
+}
+
+.navButtons {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+    z-index: 10;
+    padding: 0 10px;
+}
+
+.navBtn {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 1px solid #e5e7eb;
+    background-color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #1a1a1a;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    pointer-events: auto;
+}
+
+.navBtn:hover {
+    background-color: #1a1a1a;
+    border-color: #1a1a1a;
+    color: #ffffff;
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.prevBtn {
+    margin-inline-start: -20px;
+}
+
+.nextBtn {
+    margin-inline-end: -20px;
+}
+
+.emblaViewport {
+    overflow: hidden;
+    width: 100%;
+    touch-action: pan-y pinch-zoom;
+}
+
+.productGrid {
+    display: flex;
+    gap: 0;
+    /* Embla works better with slide flex-basis or padding */
+    padding: 20px 0;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.productWrapper {
+    flex: 0 0 220px;
+    width: 220px;
+    height: 100%;
+    padding-inline-end: 2px;
+    /* Replaces the gap */
+}
+
+@media (max-width: 576px) {
+    .headerFlex {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        padding-bottom: 8px;
+    }
+
+    .headerActions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+    }
+
+    .title {
+        font-size: 15px;
+        white-space: nowrap;
+        flex-shrink: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 700;
+    }
+
+    .mainTimer {
+        font-size: 10px;
+        padding: 2px 6px;
+        flex-shrink: 0;
+    }
+
+    .viewAll {
+        font-size: 12px;
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+
+    .navBtn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .productGrid {
+        display: flex;
+        /* Ensure it stays flex for Embla */
+        padding: 10px 0;
+    }
+
+    .productWrapper {
+        flex: 0 0 50%;
+        /* Shows 2 items correctly on mobile */
+        width: 50%;
+        padding-inline-end: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 20px;
+    }
+
+    .navButtons {
+        display: none;
+    }
+
+    .headerActions {
+        gap: 15px;
+    }
+}

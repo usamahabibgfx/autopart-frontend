@@ -1,0 +1,887 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import styles from './AdminBrands.module.css';
+import { Plus, Edit2, Trash2, X, Image as ImageIcon, ExternalLink, Globe, Search, Filter } from 'lucide-react';
+import { useNotification } from '@/context/NotificationContext';
+import { API_BASE_URL } from '@/config';
+import { getAuthHeaders } from '@/utils/authHeaders';
+import { resolveUrl } from '@/utils/resolveUrl';
+import ConfirmModal from '@/components/shared/ConfirmModal/ConfirmModal';
+import AdminLoader from '@/components/shared/AdminLoader/AdminLoader';
+
+const AdminBrands = () => {
+    const [brands, setBrands] = useState<any[]>([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [logoPreview, setLogoPreview] = useState<string | null>(null);
+    const [bannerFile, setBannerFile] = useState<File | null>(null);
+    const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+    const [logoArFile, setLogoArFile] = useState<File | null>(null);
+    const [logoArPreview, setLogoArPreview] = useState<string | null>(null);
+    const [bannerArFile, setBannerArFile] = useState<File | null>(null);
+    const [bannerArPreview, setBannerArPreview] = useState<string | null>(null);
+    const [priorityError, setPriorityError] = useState('');
+    const { showNotification } = useNotification();
+
+    const categoryOptions = [
+        "Cooking", "Refrigeration-line", "Coffee & Bar", "Bakery", "Food Processing", "Snack Maker", "Laundry & Dish Washer", "Super Market", "Dry Store"
+    ];
+
+    // Form state
+    const [formData, setFormData] = useState({
+        name: '',
+        name_ar: '',
+        description: '',
+        description_ar: '',
+        image_url: '',
+        banner_url: '',
+        image_url_ar: '',
+        banner_url_ar: '',
+        website_url: '',
+        is_active: true,
+        brand_type: '',
+        priority: ''
+    });
+
+    useEffect(() => {
+        fetchBrands();
+    }, []);
+
+    // Selection state
+    const [isActionLoading, setIsActionLoading] = useState(false);
+
+    // Confirmation Modal State
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+        type: 'danger' | 'warning' | 'info';
+        confirmLabel?: string;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { },
+        type: 'danger'
+    });
+
+    const fetchBrands = async () => {
+        try {
+            setLoading(true);
+            const res = await fetch(`${API_BASE_URL}/brands?all=1`, { credentials: "include", headers: getAuthHeaders() });
+            const data = await res.json();
+            if (data.success) {
+                setBrands(data.data);
+            }
+            setLoading(false);
+        } catch (error) {
+            console.error('Failed to fetch brands', error);
+            setLoading(false);
+        }
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setLogoFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => setLogoPreview(reader.result as string);
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setBannerFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => setBannerPreview(reader.result as string);
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleLogoArChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setLogoArFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => setLogoArPreview(reader.result as string);
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleBannerArChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setBannerArFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => setBannerArPreview(reader.result as string);
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleEditClick = (brand: any) => {
+        setEditingId(brand.id);
+        setFormData({
+            name: brand.name,
+            name_ar: brand.name_ar || '',
+            description: brand.description || '',
+            description_ar: brand.description_ar || '',
+            image_url: brand.image_url || '',
+            banner_url: brand.banner_url || '',
+            image_url_ar: brand.image_url_ar || '',
+            banner_url_ar: brand.banner_url_ar || '',
+            website_url: brand.website_url || '',
+            is_active: Boolean(brand.is_active),
+            brand_type: brand.brand_type || '',
+            priority: brand.priority ?? ''
+        });
+        setLogoPreview(brand.image_url || null);
+        setLogoFile(null);
+        setBannerPreview(brand.banner_url || null);
+        setBannerFile(null);
+        setLogoArPreview(brand.image_url_ar || null);
+        setLogoArFile(null);
+        setBannerArPreview(brand.banner_url_ar || null);
+        setBannerArFile(null);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setEditingId(null);
+        setFormData({
+            name: '',
+            name_ar: '',
+            description: '',
+            description_ar: '',
+            image_url: '',
+            banner_url: '',
+            image_url_ar: '',
+            banner_url_ar: '',
+            website_url: '',
+            is_active: true,
+            brand_type: '',
+            priority: ''
+        });
+        setLogoPreview(null);
+        setLogoFile(null);
+        setBannerPreview(null);
+        setBannerFile(null);
+        setLogoArPreview(null);
+        setLogoArFile(null);
+        setBannerArPreview(null);
+        setBannerArFile(null);
+        setPriorityError('');
+    };
+
+    const handleCategoryToggle = (cat: string) => {
+        setFormData(prev => {
+            const currentTypes = prev.brand_type ? prev.brand_type.split(',').map(s => s.trim()) : [];
+            const newTypes = currentTypes.includes(cat)
+                ? currentTypes.filter(t => t !== cat)
+                : [...currentTypes, cat];
+            return { ...prev, brand_type: newTypes.join(', ') };
+        });
+    };
+
+    const handleSaveBrand = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (isSaving) return;
+        try {
+            setPriorityError('');
+            if (formData.priority !== '') {
+                const pNum = Number(formData.priority);
+                if (pNum > brands.length) {
+                    setPriorityError(`Priority cannot exceed total brands (${brands.length}). Enter a number between 1 and ${brands.length}.`);
+                    return;
+                }
+            }
+            setIsSaving(true);
+            let currentImageUrl = formData.image_url;
+            let currentBannerUrl = formData.banner_url;
+            let currentImageUrlAr = formData.image_url_ar;
+            let currentBannerUrlAr = formData.banner_url_ar;
+
+            const uploadImage = async (file: File) => {
+                const fd = new FormData();
+                fd.append('image', file);
+                const res = await fetch(`${API_BASE_URL}/upload/image?folder=brands`, {
+                    method: 'POST', credentials: "include", body: fd, headers: getAuthHeaders()
+                });
+                return res.json();
+            };
+
+            if (logoFile) {
+                const uploadData = await uploadImage(logoFile);
+                if (uploadData.success) {
+                    currentImageUrl = uploadData.data;
+                } else {
+                    showNotification(uploadData.message || 'Logo upload failed', 'error');
+                    setIsSaving(false);
+                    return;
+                }
+            }
+
+            if (bannerFile) {
+                const uploadData = await uploadImage(bannerFile);
+                if (uploadData.success) {
+                    currentBannerUrl = uploadData.data;
+                } else {
+                    showNotification(uploadData.message || 'Banner upload failed', 'error');
+                    setIsSaving(false);
+                    return;
+                }
+            }
+
+            if (logoArFile) {
+                const uploadData = await uploadImage(logoArFile);
+                if (uploadData.success) {
+                    currentImageUrlAr = uploadData.data;
+                } else {
+                    showNotification(uploadData.message || 'Arabic logo upload failed', 'error');
+                    setIsSaving(false);
+                    return;
+                }
+            }
+
+            if (bannerArFile) {
+                const uploadData = await uploadImage(bannerArFile);
+                if (uploadData.success) {
+                    currentBannerUrlAr = uploadData.data;
+                } else {
+                    showNotification(uploadData.message || 'Arabic banner upload failed', 'error');
+                    setIsSaving(false);
+                    return;
+                }
+            }
+
+            const url = editingId
+                ? `${API_BASE_URL}/brands/${editingId}`
+                : `${API_BASE_URL}/brands`;
+            const method = editingId ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                credentials: "include",
+                method,
+                headers: {
+                    ...getAuthHeaders(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    ...formData,
+                    image_url: currentImageUrl,
+                    banner_url: currentBannerUrl,
+                    image_url_ar: currentImageUrlAr,
+                    banner_url_ar: currentBannerUrlAr,
+                    is_active: formData.is_active ? 1 : 0,
+                    priority: formData.priority !== '' ? Number(formData.priority) : ''
+                })
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                showNotification(editingId ? 'Brand updated successfully!' : 'Brand created successfully!');
+                handleCloseModal();
+                fetchBrands();
+            } else if (data.message?.toLowerCase().includes('priority')) {
+                setPriorityError(data.message);
+            } else {
+                showNotification(data.message || 'Operation failed', 'error');
+            }
+        } catch (error) {
+            console.error(error);
+            showNotification('An error occurred', 'error');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDeleteBrand = (id: number) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Delete Brand',
+            message: 'Are you sure you want to delete this brand? This action cannot be undone.',
+            confirmLabel: 'Delete',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    setIsActionLoading(true);
+                    const res = await fetch(`${API_BASE_URL}/brands/${id}`, {
+                        method: 'DELETE',
+                        credentials: "include",
+                        headers: getAuthHeaders()
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        showNotification('Brand deleted successfully');
+                        fetchBrands();
+                    } else {
+                        showNotification(data.message || 'Failed to delete brand', 'error');
+                    }
+                } catch (error) {
+                    showNotification('Failed to delete brand', 'error');
+                } finally {
+                    setIsActionLoading(false);
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                }
+            }
+        });
+    };
+
+    const handleBulkDelete = () => {
+        if (selectedIds.length === 0) return;
+
+        setConfirmModal({
+            isOpen: true,
+            title: 'Bulk Delete Brands',
+            message: `Are you sure you want to delete ${selectedIds.length} selected brands? This action cannot be undone.`,
+            confirmLabel: 'Delete All',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    setLoading(true);
+                    setIsActionLoading(true);
+                    const res = await fetch(`${API_BASE_URL}/brands`, {
+                        method: 'DELETE',
+                        credentials: "include",
+                        headers: {
+                            ...getAuthHeaders(),
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ ids: selectedIds })
+                    });
+                    const data = await res.json();
+                    const deleted = typeof data.deleted === 'number' ? data.deleted : (data.success ? selectedIds.length : 0);
+                    const skipped = typeof data.skipped === 'number' ? data.skipped : 0;
+
+                    if (deleted > 0 && skipped === 0) {
+                        showNotification(`Deleted ${deleted} brand${deleted === 1 ? '' : 's'}.`, 'success');
+                    } else if (deleted > 0 && skipped > 0) {
+                        const names = (data.skippedDetails || []).slice(0, 3).map((b: any) => b.name).join(', ');
+                        const more = skipped > 3 ? ` +${skipped - 3} more` : '';
+                        showNotification(
+                            `Deleted ${deleted}. Skipped ${skipped} still in use: ${names}${more}.`,
+                            'info'
+                        );
+                    } else if (skipped > 0) {
+                        showNotification(
+                            `Couldn't delete — ${skipped} brand${skipped === 1 ? '' : 's'} still have active products. Reassign or move to draft first.`,
+                            'error'
+                        );
+                    } else {
+                        showNotification(data.message || 'Bulk delete failed', 'error');
+                    }
+
+                    if (deleted > 0) {
+                        setSelectedIds([]);
+                        fetchBrands();
+                    }
+                } catch (error) {
+                    showNotification('An error occurred during bulk delete', 'error');
+                } finally {
+                    setLoading(false);
+                    setIsActionLoading(false);
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                }
+            }
+        });
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === brands.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(brands.map(b => b.id));
+        }
+    };
+
+    const toggleSelect = (id: number) => {
+        if (selectedIds.includes(id)) {
+            setSelectedIds(selectedIds.filter(i => i !== id));
+        } else {
+            setSelectedIds([...selectedIds, id]);
+        }
+    };
+
+    const handleBulkStatusUpdate = async (active: boolean) => {
+        if (selectedIds.length === 0) return;
+        try {
+            // We'll update individually for now as there's no bulk endpoint, 
+            // but for better UX we'll wait for all to complete
+            const promises = selectedIds.map(id =>
+                fetch(`${API_BASE_URL}/brands/${id}`, {
+                    credentials: "include",
+                    method: 'PUT',
+                    headers: {
+                        ...getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ is_active: active ? 1 : 0 })
+                })
+            );
+
+            await Promise.all(promises);
+            showNotification(`Updated ${selectedIds.length} brands status`);
+            setSelectedIds([]);
+            fetchBrands();
+        } catch (error) {
+            showNotification('Failed to update brands status', 'error');
+        }
+    };
+
+    const [failedLogos, setFailedLogos] = useState<Record<number, boolean>>({});
+
+    const filteredBrands = brands.filter(brand => {
+        const matchesSearch = brand.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (brand.description && brand.description.toLowerCase().includes(searchTerm.toLowerCase()));
+
+        const matchesStatus = statusFilter === 'all' ||
+            (statusFilter === 'active' && brand.is_active) ||
+            (statusFilter === 'inactive' && !brand.is_active);
+
+        return matchesSearch && matchesStatus;
+    });
+
+    return (
+        <div className={styles.adminBrands}>
+            <div className={styles.header}>
+                <div className={styles.titleSection}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <h1>Brand Management</h1>
+                        <div className={styles.totalBadge}>
+                            <Globe size={14} />
+                            <span><strong>{brands.length}</strong> brands</span>
+                        </div>
+                    </div>
+                    <p>Manage your collection of partner brands and manufacturers.</p>
+                </div>
+                <div className={styles.headerActions}>
+                    {selectedIds.length > 0 && (
+                        <button className={styles.bulkDeleteBtn} onClick={handleBulkDelete}>
+                            <Trash2 size={18} />
+                            <span>Delete ({selectedIds.length})</span>
+                        </button>
+                    )}
+                    <button className={styles.addBtn} onClick={() => {
+                        setEditingId(null);
+                        handleCloseModal();
+                        setIsModalOpen(true);
+                    }}>
+                        <Plus size={20} />
+                        <span>Add New Brand</span>
+                    </button>
+                </div>
+            </div>
+
+            <div className={styles.filtersWrapper}>
+                <div className={styles.searchBox}>
+                    <Search size={18} />
+                    <input
+                        type="text"
+                        placeholder="Search brands by name..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <div className={styles.filterBox}>
+                    <select
+                        className={styles.filterSelect}
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                        <option value="all">All Brands</option>
+                        <option value="active">Active Only</option>
+                        <option value="inactive">Inactive Only</option>
+                    </select>
+                </div>
+            </div>
+
+            <div className={styles.tableWrapper}>
+                <table className={styles.table}>
+                    <thead>
+                        <tr>
+                            <th style={{ width: '40px' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={brands.length > 0 && selectedIds.length === brands.length}
+                                    onChange={toggleSelectAll}
+                                />
+                            </th>
+                            <th style={{ width: '80px' }}>Logo</th>
+                            <th>Brand Name</th>
+                            <th>Description</th>
+                            <th style={{ width: '80px', textAlign: 'center' }}>Priority</th>
+                            <th>Website</th>
+                            <th>Status</th>
+                            <th style={{ textAlign: 'right' }}>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {loading ? (
+                            <tr><td colSpan={8} style={{ textAlign: 'center', padding: '60px' }}><AdminLoader message="Loading Brands Catalog..." /></td></tr>
+                        ) : filteredBrands.length === 0 ? (
+                            <tr><td colSpan={8} style={{ textAlign: 'center', padding: '40px' }}>No brands found.</td></tr>
+                        ) : (
+                            filteredBrands.map((brand) => (
+                                <tr key={brand.id} style={brand.priority != null ? { background: '#f8faff' } : undefined}>
+                                    <td>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.includes(brand.id)}
+                                            onChange={() => toggleSelect(brand.id)}
+                                        />
+                                    </td>
+                                    <td>
+                                        <div className={styles.brandLogo}>
+                                            {brand.image_url && !failedLogos[brand.id] ? (
+                                                <img
+                                                    src={resolveUrl(brand.image_url)}
+                                                    alt={brand.name}
+                                                    onError={() => setFailedLogos(prev => ({ ...prev, [brand.id]: true }))}
+                                                />
+                                            ) : (
+                                                <div className={styles.logoPlaceholder}>
+                                                    <span className={styles.logoInitials}>
+                                                        {brand.name.substring(0, 2).toUpperCase()}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span className={styles.brandName}>{brand.name}</span>
+                                    </td>
+                                    <td>
+                                        <p className={styles.descriptionText}>{brand.description || 'No description'}</p>
+                                    </td>
+                                    <td style={{ textAlign: 'center' }}>
+                                        {brand.priority != null ? (
+                                            <span style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                minWidth: '32px',
+                                                height: '24px',
+                                                padding: '0 8px',
+                                                borderRadius: '12px',
+                                                fontSize: '12px',
+                                                fontWeight: 800,
+                                                background: '#eff6ff',
+                                                color: '#2563eb',
+                                                border: '1px solid #bfdbfe'
+                                            }}>
+                                                #{brand.priority}
+                                            </span>
+                                        ) : (
+                                            <span style={{ color: '#cbd5e1', fontSize: '13px' }}>—</span>
+                                        )}
+                                    </td>
+                                    <td>
+                                        {brand.website_url ? (
+                                            <a href={brand.website_url} target="_blank" rel="noopener noreferrer" className={styles.websiteLink}>
+                                                <Globe size={14} />
+                                                <span>Visit Site</span>
+                                                <ExternalLink size={12} />
+                                            </a>
+                                        ) : '-'}
+                                    </td>
+                                    <td>
+                                        <span className={brand.is_active ? styles.statusActive : styles.statusInactive}>
+                                            {brand.is_active ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
+                                            <button className={styles.editBtn} onClick={() => handleEditClick(brand)}><Edit2 size={16} /></button>
+                                            <button className={styles.deleteBtn} onClick={() => handleDeleteBrand(brand.id)}><Trash2 size={16} /></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {isModalOpen && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modal}>
+                        <div className={styles.modalHeader}>
+                            <h2>{editingId ? 'Edit Brand' : 'Add New Brand'}</h2>
+                            <button className={styles.closeBtn} onClick={handleCloseModal}>
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <form className={styles.form} onSubmit={handleSaveBrand}>
+                            <div className={styles.formLeft}>
+                                <div className={styles.formGroup}>
+                                    <label>Brand Name (English)</label>
+                                    <input
+                                        type="text"
+                                        name="name"
+                                        required
+                                        placeholder="e.g. Samsung"
+                                        value={formData.name}
+                                        onChange={handleInputChange}
+                                    />
+                                </div>
+
+                                <div className={styles.formGroup}>
+                                    <label>Brand Name (Arabic)</label>
+                                    <input
+                                        type="text"
+                                        name="name_ar"
+                                        placeholder="اسم العلامة التجارية باللغة العربية"
+                                        value={formData.name_ar}
+                                        onChange={handleInputChange}
+                                        dir="rtl"
+                                    />
+                                </div>
+
+                                <div className={styles.formGroup}>
+                                    <label>Description (English)</label>
+                                    <textarea
+                                        name="description"
+                                        placeholder="Brief background about the brand..."
+                                        value={formData.description}
+                                        onChange={handleInputChange}
+                                        rows={6}
+                                    />
+                                </div>
+
+                                <div className={styles.formGroup}>
+                                    <label>Description (Arabic)</label>
+                                    <textarea
+                                        name="description_ar"
+                                        placeholder="وصف العلامة التجارية باللغة العربية"
+                                        value={formData.description_ar}
+                                        onChange={handleInputChange}
+                                        rows={6}
+                                        dir="rtl"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className={styles.formRight}>
+                                <div className={styles.imageUploadsRow}>
+                                    <div className={styles.formGroup}>
+                                        <label>Brand Logo</label>
+                                        <div className={styles.fileUploadWrapper}>
+                                            {logoPreview ? (
+                                                <div className={styles.previewContainer}>
+                                                    <img src={resolveUrl(logoPreview)} alt="Preview" className={styles.previewImage} />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { setLogoPreview(null); setLogoFile(null); }}
+                                                        className={styles.removeFileBtn}
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <label className={styles.fileLabel}>
+                                                    <Plus size={24} />
+                                                    <span>Click to upload brand logo</span>
+                                                    <input type="file" accept="image/*" onChange={handleFileChange} hidden />
+                                                </label>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className={styles.formGroup}>
+                                        <label>Brand Banner</label>
+                                        <div className={`${styles.fileUploadWrapper} ${styles.bannerUploadWrapper}`}>
+                                            {bannerPreview ? (
+                                                <div className={styles.bannerPreviewContainer}>
+                                                    <img src={resolveUrl(bannerPreview)} alt="Banner Preview" className={styles.bannerPreviewImage} />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { setBannerPreview(null); setBannerFile(null); }}
+                                                        className={styles.bannerRemoveBtn}
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <label className={styles.fileLabel}>
+                                                    <Plus size={24} />
+                                                    <span>Click to upload brand banner</span>
+                                                    <span className={styles.uploadHint}>Recommended: 1920 × 576 px</span>
+                                                    <input type="file" accept="image/*" onChange={handleBannerChange} hidden />
+                                                </label>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className={styles.imageUploadsRow}>
+                                    <div className={styles.formGroup}>
+                                        <label>Brand Logo (Arabic)</label>
+                                        <div className={styles.fileUploadWrapper}>
+                                            {logoArPreview ? (
+                                                <div className={styles.previewContainer}>
+                                                    <img src={resolveUrl(logoArPreview)} alt="Arabic Logo Preview" className={styles.previewImage} />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { setLogoArPreview(null); setLogoArFile(null); setFormData(prev => ({ ...prev, image_url_ar: '' })); }}
+                                                        className={styles.removeFileBtn}
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <label className={styles.fileLabel}>
+                                                    <Plus size={24} />
+                                                    <span>Click to upload Arabic logo</span>
+                                                    <span className={styles.uploadHint}>Shown when language is Arabic</span>
+                                                    <input type="file" accept="image/*" onChange={handleLogoArChange} hidden />
+                                                </label>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className={styles.formGroup}>
+                                        <label>Brand Banner (Arabic)</label>
+                                        <div className={`${styles.fileUploadWrapper} ${styles.bannerUploadWrapper}`}>
+                                            {bannerArPreview ? (
+                                                <div className={styles.bannerPreviewContainer}>
+                                                    <img src={resolveUrl(bannerArPreview)} alt="Arabic Banner Preview" className={styles.bannerPreviewImage} />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { setBannerArPreview(null); setBannerArFile(null); setFormData(prev => ({ ...prev, banner_url_ar: '' })); }}
+                                                        className={styles.bannerRemoveBtn}
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <label className={styles.fileLabel}>
+                                                    <Plus size={24} />
+                                                    <span>Click to upload Arabic banner</span>
+                                                    <span className={styles.uploadHint}>Recommended: 1920 × 576 px · shown when language is Arabic</span>
+                                                    <input type="file" accept="image/*" onChange={handleBannerArChange} hidden />
+                                                </label>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className={styles.formGroup}>
+                                    <label>Website URL</label>
+                                    <input
+                                        type="text"
+                                        name="website_url"
+                                        placeholder="https://www.brandwebsite.com"
+                                        value={formData.website_url}
+                                        onChange={handleInputChange}
+                                    />
+                                </div>
+
+                                <div className={styles.formGroup}>
+                                    <label>Display Priority <span className={styles.uploadHint}>(1 = first, 2 = second… leave empty for no priority)</span></label>
+                                    <input
+                                        type="number"
+                                        name="priority"
+                                        min="1"
+                                        placeholder="e.g. 1"
+                                        value={formData.priority}
+                                        onChange={(e) => {
+                                            setPriorityError('');
+                                            setFormData(prev => ({ ...prev, priority: e.target.value }));
+                                        }}
+                                        onBlur={(e) => {
+                                            const val = parseInt(e.target.value, 10);
+                                            if (!isNaN(val) && val > brands.length) {
+                                                setPriorityError(`Priority cannot exceed total brands (${brands.length}). Enter a number between 1 and ${brands.length}.`);
+                                            }
+                                        }}
+                                        style={{ maxWidth: '120px', borderColor: priorityError ? '#ef4444' : undefined }}
+                                    />
+                                    {priorityError && (
+                                        <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#ef4444', fontWeight: 500 }}>
+                                            {priorityError}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className={styles.formGroup}>
+                                    <label>Brand Categories</label>
+                                    <div className={styles.categoryCheckboxes}>
+                                        {categoryOptions.map(cat => (
+                                            <label key={cat} className={styles.checkboxLabel}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.brand_type ? formData.brand_type.split(',').map(s => s.trim()).includes(cat) : false}
+                                                    onChange={() => handleCategoryToggle(cat)}
+                                                />
+                                                <span>{cat}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className={styles.formGroup}>
+                                    <label className={styles.checkboxLabel}>
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.is_active}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+                                        />
+                                        <span>Active Status</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </form>
+                        <div className={styles.modalFooter}>
+                            <button type="button" className={styles.cancelBtn} onClick={handleCloseModal}>
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.submitBtn}
+                                disabled={isSaving}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    handleSaveBrand(e as any);
+                                }}
+                            >
+                                {isSaving ? (editingId ? 'Updating...' : 'Creating...') : (editingId ? 'Update Brand' : 'Create Brand')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmLabel={confirmModal.confirmLabel}
+                type={confirmModal.type}
+                isLoading={isActionLoading}
+                onConfirm={confirmModal.onConfirm}
+                onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+            />
+        </div>
+    );
+};
+
+export default AdminBrands;

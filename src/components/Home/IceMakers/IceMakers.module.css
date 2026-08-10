@@ -1,0 +1,201 @@
+.weeklySection {
+    padding: 20px 0;
+    margin-top: 0;
+    background-color: #f9fafb;
+}
+
+.container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0 60px;
+}
+
+.sectionHeader {
+    margin-bottom: 30px;
+}
+
+.mobileHeader {
+    display: none;
+}
+
+.title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a202c;
+    margin: 0;
+    letter-spacing: -0.02em;
+    font-family: 'Inter', -apple-system, sans-serif;
+    text-transform: capitalize;
+}
+
+.headerFlex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.titleGroup {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.headerActions {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+
+.viewAll {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #086c7e;
+    text-decoration: none;
+    font-family: 'Inter', -apple-system, sans-serif;
+    transition: all 0.2s ease;
+}
+
+.viewAll:hover {
+    color: #0b8fa8;
+}
+
+.sliderWrapper {
+    position: relative;
+    width: 0;
+    flex-grow: 1;
+}
+
+.sectionContent {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    width: 100%;
+    margin-top: 20px;
+}
+
+.promoColumn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: stretch;
+    /* Force child (CategoryPromotionCard) to stretch to container height */
+}
+
+
+.navButtons {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+    z-index: 15;
+    padding: 0 10px;
+}
+
+.navBtn {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 1px solid #e5e7eb;
+    background-color: rgba(255, 255, 255, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #1a1a1a;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    pointer-events: auto;
+}
+
+@media (hover: hover) {
+
+    .navBtn:hover {
+        background-color: #1a1a1a;
+        border-color: #1a1a1a;
+        color: #ffffff;
+        transform: scale(1.1);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+}
+
+.prevBtn {
+    margin-inline-start: -20px;
+}
+
+.nextBtn {
+    margin-inline-end: -20px;
+}
+
+@media (max-width: 576px) {
+    .navBtn {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+/* Embla Styles */
+.emblaViewport {
+    overflow: hidden;
+    width: 100%;
+}
+
+.dealsGrid {
+    display: flex;
+    align-items: stretch;
+    /* Force same height for all products */
+}
+
+.productWrapper {
+    flex: 0 0 220px;
+    min-width: 0;
+    padding-inline-end: 2px;
+    display: flex;
+    /* Allow ProductCardPromotion to stretch to match grid height */
+}
+
+@media (max-width: 576px) {
+    .container {
+        padding: 0 15px;
+    }
+
+    .headerFlex {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        padding-bottom: 8px;
+    }
+
+    .title {
+        font-size: 16px;
+        white-space: nowrap;
+    }
+
+    .viewAll {
+        font-size: 13px;
+    }
+
+    .productWrapper {
+        flex: 0 0 50%;
+        padding-inline-end: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 20px;
+    }
+
+    .navButtons {
+        display: none;
+    }
+}

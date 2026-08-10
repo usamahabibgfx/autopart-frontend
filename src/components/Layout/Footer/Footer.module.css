@@ -1,0 +1,779 @@
+.footer {
+    width: 100%;
+}
+
+.container {
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+@media (min-width: 1024px) {
+    .container {
+        padding: 0 40px;
+    }
+}
+
+/* 1. Support Bar */
+.supportBar {
+    background-color: #f0f7ff;
+    padding: 30px 0;
+    border-bottom: 1px solid #e1e8f0;
+}
+
+.supportBar .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.supportHeader {
+    display: flex;
+    align-items: center;
+}
+
+.supportText h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.supportText p {
+    font-size: 12px;
+    color: #666;
+}
+
+.mobileLanguageToggle {
+    display: none;
+}
+
+/* Switch Styles */
+.switch {
+    width: 110px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.switch>span {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    font-family: 'Helvetica', Arial, sans-serif;
+    font-weight: bold;
+    font-size: 12px;
+    text-transform: uppercase;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, .06);
+    width: 55px;
+    z-index: 5;
+    line-height: normal;
+}
+
+.checkToggleRoundFlat:checked~.switchOff {
+    color: #fff;
+}
+
+.checkToggleRoundFlat:checked~.switchOn {
+    color: var(--primary-teal);
+}
+
+.switch>span.switchOn {
+    left: 3px;
+    padding-inline-start: 0;
+    color: #fff;
+    transform: translate(-2px, -1px);
+}
+
+.switch>span.switchOff {
+    right: 3px;
+    padding-inline-end: 0;
+    color: var(--primary-teal);
+}
+
+.checkToggle {
+    position: absolute;
+    margin-inline-start: -9999px;
+    visibility: hidden;
+}
+
+.checkToggle+label {
+    display: block;
+    position: relative;
+    cursor: pointer;
+    outline: none;
+    user-select: none;
+}
+
+.checkToggleRoundFlat+label {
+    padding: 2px;
+    width: 110px;
+    height: 40px;
+    background-color: transparent;
+    border-radius: 60px;
+}
+
+.checkToggleRoundFlat+label:before,
+.checkToggleRoundFlat+label:after {
+    display: block;
+    position: absolute;
+    content: "";
+}
+
+.checkToggleRoundFlat+label:before {
+    top: 0px;
+    left: 0px;
+    bottom: 0px;
+    right: 0px;
+    border: 2px solid var(--primary-teal);
+    background-color: transparent;
+    border-radius: 60px;
+}
+
+.checkToggleRoundFlat+label:after {
+    top: 3px;
+    left: 3px;
+    bottom: 3px;
+    width: 55px;
+    background-color: var(--primary-teal);
+    border-radius: 52px;
+    transition: margin 0.2s;
+    z-index: 2;
+}
+
+.checkToggleRoundFlat:checked+label:after {
+    margin-inline-start: 49px;
+}
+
+.supportIcons {
+    display: flex;
+    gap: 40px;
+}
+
+.supportItem {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.iconCircle {
+    width: 45px;
+    height: 45px;
+    background-color: var(--primary-teal);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.iconCircle svg {
+    display: block;
+    stroke: #ffffff;
+    stroke-width: 2.5px;
+}
+
+.itemInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.itemLabel {
+    font-size: 11px;
+    font-weight: 800;
+    color: #333;
+    letter-spacing: 0.5px;
+}
+
+.itemValue {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111;
+}
+
+.itemSub {
+    font-size: 11px;
+    color: #888;
+}
+
+.chevronIcon {
+    display: none;
+    color: var(--primary-teal);
+}
+
+/* 2. Main Footer */
+.mainFooter {
+    background-color: #f1f1f1;
+    padding: 60px 0 40px;
+}
+
+.footerGrid {
+    display: grid;
+    grid-template-columns: 1fr 1.8fr 1fr 1.2fr;
+    gap: 30px;
+    margin-bottom: 20px;
+    /* Reduced from 50px */
+}
+
+/* Logo & About Col */
+.footerLogoWrapper {
+    display: block;
+    margin-bottom: 25px;
+}
+
+.footerLogoImg {
+    display: block;
+    max-width: 180px;
+    height: auto;
+    object-fit: contain;
+}
+
+.payLogoSvg {
+    height: 24px;
+    width: auto;
+}
+
+.brandName {
+    color: #0056b3;
+    font-size: 28px;
+    font-weight: 900;
+    margin: 0;
+    line-height: 1;
+    letter-spacing: -1.5px;
+}
+
+.brandName span {
+    font-size: 14px;
+    vertical-align: super;
+    margin-inline-start: 2px;
+}
+
+.subText {
+    color: #d90429;
+    font-size: 11px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: 1px;
+}
+
+.address {
+    font-style: normal;
+    font-size: 14px;
+    font-weight: 800;
+    color: #222;
+    line-height: 1.4;
+}
+
+/* Columns */
+.descCol p {
+    font-size: 13px;
+    line-height: 1.8;
+    color: #333;
+    font-weight: 500;
+    text-align: start;
+}
+
+.desktopLanguageSection {
+    margin-top: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.desktopLanguageSection h4 {
+    font-size: 15px;
+    font-weight: 800;
+    color: #111;
+    margin-bottom: 0px;
+    letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+    .desktopLanguageSection {
+        display: none;
+    }
+}
+
+.linksCol h4 {
+    font-size: 16px;
+    font-weight: 900;
+    margin-bottom: 25px;
+    color: #111;
+    letter-spacing: 0.5px;
+}
+
+.linksCol ul {
+    padding: 0;
+    margin: 0;
+}
+
+.linksCol li {
+    margin-bottom: 8px;
+}
+
+.linksCol a {
+    font-size: 13px;
+    color: #333;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+@media (hover: hover) {
+
+    .linksCol a:hover {
+        color: #000;
+        text-decoration: underline;
+    }
+}
+
+.socialSection h4 {
+    font-size: 16px;
+    font-weight: 800;
+    margin-bottom: 15px;
+    color: #111;
+}
+
+.socialIcons {
+    display: flex;
+    gap: 12px;
+}
+
+.socialIcons a {
+    width: 42px;
+    height: 42px;
+    background-color: #ffffff;
+    color: #111111;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 1px solid #d1d5db;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.socialIcons a svg {
+    stroke-width: 2px;
+    transition: transform 0.3s ease;
+}
+
+/* Brand Colors on Hover */
+@media (hover: hover) {
+    .socialIcons a.facebook:hover {
+        background-color: #1877f2;
+        color: #fff;
+        border-color: #1877f2;
+        transform: translateY(-3px);
+    }
+}
+
+@media (hover: hover) {
+
+    .socialIcons a.instagram:hover {
+        background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
+        color: #fff;
+        border-color: transparent;
+        transform: translateY(-3px);
+    }
+}
+
+@media (hover: hover) {
+
+    .socialIcons a.youtube:hover {
+        background-color: #FF0000;
+        color: #fff;
+        border-color: #FF0000;
+        transform: translateY(-3px);
+    }
+}
+
+@media (hover: hover) {
+
+    .socialIcons a.tiktok:hover {
+        background-color: #000000;
+        color: #fff;
+        border-color: #000000;
+        transform: translateY(-3px);
+    }
+}
+
+@media (hover: hover) {
+
+    .socialIcons a.twitter:hover {
+        background-color: #000000;
+        color: #fff;
+        border-color: #000000;
+        transform: translateY(-3px);
+    }
+}
+
+@media (hover: hover) {
+
+    .socialIcons a.pinterest:hover {
+        background-color: #E60023;
+        color: #fff;
+        border-color: #E60023;
+        transform: translateY(-3px);
+    }
+}
+
+@media (hover: hover) {
+
+    .socialIcons a.linkedin:hover {
+        background-color: #0077b5;
+        color: #fff;
+        border-color: #0077b5;
+        transform: translateY(-3px);
+    }
+}
+
+@media (hover: hover) {
+
+    .socialIcons a:hover svg {
+        transform: scale(1.1);
+    }
+}
+
+/* Payment Section */
+.footerBottomRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e1e8f0;
+}
+
+.socialSection h4,
+.paymentSection h4 {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 10px;
+    /* Reduced from 20px */
+    color: #111;
+}
+
+.paymentIcons {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.payOption {
+    background: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #e1e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+    transition: all 0.2s;
+}
+
+@media (hover: hover) {
+
+    .payOption:hover {
+        border-color: #70d475;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+}
+
+.payLogo,
+.payLogoSvg {
+    height: 28px;
+    width: auto;
+    object-fit: contain;
+}
+
+.visaLogo {
+    height: 38px;
+}
+
+/* 3. Copyright Bar */
+.copyrightBar {
+    background-color: #70d475;
+    color: #111;
+    padding: 12px 0;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Responsiveness */
+@media (max-width: 1024px) {
+    .footerGrid {
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+    }
+}
+
+/* Tablet support bar: stack header above contact items, allow wrapping */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .supportBar .container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 24px;
+    }
+
+    .supportHeader {
+        justify-content: flex-start;
+    }
+
+    .supportIcons {
+        gap: 16px;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+
+    .supportItem {
+        flex: 1 1 220px;
+        min-width: 0;
+        gap: 12px;
+        background-color: #ffffff;
+        padding: 14px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    }
+
+    .supportItem .iconCircle {
+        width: 42px;
+        height: 42px;
+        flex-shrink: 0;
+    }
+
+    .itemInfo {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .itemValue {
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .itemLabel {
+        font-size: 11px;
+        text-transform: uppercase;
+    }
+}
+
+@media (max-width: 768px) {
+    .supportBar {
+        background-color: #f8f9fa;
+        /* Lighter background for cards to pop */
+        padding: 40px 0;
+    }
+
+    .supportBar .container {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: start;
+        gap: 30px;
+        padding: 0 12px;
+        /* Reduced side padding for full-width feel */
+    }
+
+    .supportHeader {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        gap: 15px;
+    }
+
+    .mobileLanguageToggle {
+        display: block;
+    }
+
+    .supportIcons {
+        flex-direction: column;
+        gap: 12px;
+        /* Spacing between cards */
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    .supportItem {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        /* Space icon+text from chevron */
+        width: 100%;
+        background-color: #ffffff;
+        padding: 15px;
+        /* Reduced from 20px */
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        gap: 12px;
+        text-decoration: none;
+        /* In case it's a link */
+        transition: transform 0.2s;
+    }
+
+    .supportItem:active {
+        transform: scale(0.98);
+    }
+
+    .supportItem .iconCircle {
+        width: 50px;
+        /* Reduced to give more room for text */
+        height: 50px;
+        flex-shrink: 0;
+        box-shadow: 0 4px 10px rgba(22, 161, 219, 0.2);
+    }
+
+    .supportItem .iconCircle svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .itemInfo {
+        flex: 1;
+        gap: 1px;
+        overflow: hidden;
+    }
+
+    .itemLabel {
+        font-size: 11px;
+        /* Reduced label font */
+        font-weight: 800;
+        color: var(--primary-teal);
+        text-transform: uppercase;
+    }
+
+    .itemValue {
+        font-size: 15.5px;
+        /* Fine-tuned for fit */
+        color: #1a1a1a;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .itemSub {
+        font-size: 11px;
+        color: #888;
+    }
+
+    .chevronIcon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .footerGrid {
+        grid-template-columns: 1fr;
+        text-align: start;
+        gap: 45px;
+    }
+
+    .footerLogoWrapper,
+    .footerLogoImg,
+    .socialIcons,
+    .paymentIcons {
+        justify-content: flex-start;
+    }
+
+    .address {
+        text-align: start;
+        margin-bottom: 0;
+    }
+
+    .footerBottomRow {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: start;
+        gap: 15px;
+        /* Reduced from 35px */
+        margin-top: 15px;
+        padding-top: 15px;
+    }
+
+    .descCol p {
+        text-align: start;
+        width: 100%;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .linksCol ul {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    .linksCol h4 {
+        text-align: start;
+        width: 100%;
+        margin-bottom: 15px;
+    }
+}
+
+@media (max-width: 576px) {
+    .supportText h3 {
+        font-size: 16px;
+    }
+
+    .linksCol h4 {
+        margin-bottom: 15px;
+    }
+
+    /* Scaling for perfect 35px fit on mobile single-row */
+    .socialIcons,
+    .paymentIcons {
+        gap: 10px;
+        /* Refined gap for 35px fit */
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .socialIcons::-webkit-scrollbar,
+    .paymentIcons::-webkit-scrollbar {
+        display: none;
+    }
+
+    .socialIcons a {
+        width: 35px;
+        /* Precision fit size */
+        height: 35px;
+        flex-shrink: 0;
+    }
+
+    .socialIcons a svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .payOption {
+        padding: 4px 8px;
+        height: 35px;
+        flex-shrink: 0;
+    }
+
+    .payLogoSvg,
+    .payLogo {
+        height: 18px;
+    }
+
+    .paymentSection h4,
+    .socialSection h4 {
+        font-size: 15px;
+        margin-bottom: 6px;
+    }
+}

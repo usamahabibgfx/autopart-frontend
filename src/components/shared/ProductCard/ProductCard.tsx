@@ -1,0 +1,347 @@
+'use client';
+
+import CurrencyPrice from '@/components/shared/CurrencyPrice/CurrencyPrice';
+import React, { useState } from 'react';
+import styles from './ProductCard.module.css';
+import { Heart, ShoppingCart, Star } from 'lucide-react';
+import Link from 'next/link';
+import Image from "next/legacy/image";
+import { useLocale, useTranslations } from 'next-intl';
+import { useCartActions } from '@/context/CartContext';
+import { useWishlist } from '@/context/WishlistContext';
+import { getBrandLogo } from '@/utils/brandLogos';
+
+import { resolveUrl } from '@/utils/resolveUrl';
+import { useCountdownTimer } from '@/hooks/useCountdownTimer';
+
+export interface Product {
+    id: string | number;
+    model?: string;
+    description?: string;
+    brand?: string;
+    brandImage?: string;
+    price?: string | number;
+    oldPrice?: string | number;
+    discount?: string;
+    image?: string;
+    is_weekly_deal?: boolean | number;
+    is_limited_offer?: boolean | number;
+    is_daily_offer?: boolean | number;
+    offer_start?: string;
+    offer_end?: string;
+    [key: string]: any;
+}
+
+interface ProductCardProps {
+    id?: string | number;
+    model?: string;
+    description?: string;
+    brand?: string;
+    brandImage?: string;
+    price?: number;
+    oldPrice?: number;
+    discount?: string;
+    image?: string;
+    product?: Product;
+    timeLeft?: { hours: number, minutes: number, seconds: number };
+}
+
+const ProductCard: React.FC<ProductCardProps> = ({
+    model = "10-1/1",
+    description = "RATIONAL Electric iCombi Pro- 10-1/1 Elec",
+    brand = "RATIONAL",
+    brandImage,
+    price = 0,
+    oldPrice = 0,
+    discount = "",
+    image = "https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=400&auto=format&fit=crop",
+    product,
+    id = "1",
+    timeLeft
+}) => {
+    const { addToCart } = useCartActions();
+    const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+    const locale = useLocale();
+    const t = useTranslations('product');
+    const isArabic = locale === 'ar';
+
+    // If product prop is provided, use it to override defaults
+    const displayId = product?.id || id;
+    // "Always in stock" products (track_inventory = 0) are never out of stock, even with stock_quantity 0.
+    const cardTracksInventory = product?.track_inventory === undefined || Number(product.track_inventory) === 1;
+    const cardOutOfStock = cardTracksInventory && product?.stock_quantity !== undefined && Number(product.stock_quantity) <= 0;
+    const displayModel = isArabic && product?.name_ar ? product.name_ar : (product?.name || product?.model || product?.sku || model);
+    // Canonical (non-localized) name to persist into cart/wishlist. Store the base
+    // name + name_ar separately so they re-localize with the active locale instead
+    // of freezing whichever language was active when the item was added.
+    const baseName = product?.name || product?.model || product?.sku || model;
+    // Priority: locale-specific description -> fallback
+    const displayDescription = isArabic && product?.description_ar ? product.description_ar : (product?.description || product?.title || description);
+
+    // Price Logic:
+    // An offer only applies within its active window. Once offer_end passes the
+    // product reverts to its main price (matches ProductCardPromotion / the offers page).
+    const nowTs = Date.now();
+    const isOfferActive =
+        (!product?.offer_start || new Date(product.offer_start).getTime() <= nowTs) &&
+        (!product?.offer_end || new Date(product.offer_end).getTime() > nowTs);
+    const hasOffer = isOfferActive && !!(product?.offer_price && Number(product.offer_price) > 0);
+    const displayPrice = hasOffer ? Number(product.offer_price) : (Number(product?.price) || price);
+
+    // Only show old price if it's an actual offer or explicitly provided as non-zero prop
+    const displayOldPriceValue = hasOffer
+        ? (Number(product?.price) || 0)
+        : (product ? 0 : (oldPrice || 0));
+    const displayOldPrice = displayOldPriceValue;
+
+    // Discount logic: Only show while the offer is active (so an expired offer doesn't
+    // leave a stale "% OFF" badge next to the restored main price).
+    const dbDiscount = product?.discount_percentage;
+    const isDiscountValid = isOfferActive && dbDiscount && Number(dbDiscount) > 0;
+
+    const displayDiscount = isDiscountValid
+        ? `${dbDiscount}% OFF`
+        : (product ? null : (discount || null));
+
+    // Support all possible image property names from backend/frontend
+    let displayImage = resolveUrl(product?.primary_image || product?.image_url || product?.image || image);
+
+    if (!displayImage) {
+        displayImage = '/assets/mariot-logo2.webp';
+    }
+
+    const displayBrand = isArabic && product?.brand_name_ar ? product.brand_name_ar : (product?.brand_name || product?.brand || brand);
+    const localBrandLogo = getBrandLogo(displayBrand);
+    const displayBrandImage = resolveUrl(localBrandLogo || product?.brand_image || product?.brand_logo || brandImage);
+    const isWeeklyDeal = !!(product?.is_weekly_deal);
+    const isLimitedOffer = !!(product?.is_limited_offer);
+    const isDailyOffer = !!(product?.is_daily_offer);
+
+    const isFav = isInWishlist(displayId);
+
+    const formatTime = (num: number) => num.toString().padStart(2, '0');
+
+    const countdown = useCountdownTimer(product?.offer_end);
+    const activeTimer = countdown ?? { hours: 0, minutes: 0, seconds: 0 };
+
+    const rating = Number(product?.average_rating || product?.rating || 0);
+    const reviews = Number(product?.total_reviews || product?.reviews_count || product?.review_count || 0);
+
+    const renderStars = (ratingValue: number) => {
+        const stars = [];
+        const fullStars = Math.floor(ratingValue || 0);
+        const hasHalfStar = (ratingValue || 0) % 1 !== 0;
+
+        for (let i = 0; i < fullStars; i++) {
+            stars.push(<Star key={`full-${i}`} size={14} fill="#ffc107" color="#ffc107" />);
+        }
+        if (hasHalfStar) {
+            stars.push(<div key="half" style={{ position: 'relative', display: 'inline-block' }}>
+                <Star size={14} color="#ccc" />
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '50%', overflow: 'hidden' }}>
+                    <Star size={14} fill="#ffc107" color="#ffc107" />
+                </div>
+            </div>);
+        }
+        const emptyStars = 5 - stars.length;
+        for (let i = 0; i < emptyStars; i++) {
+            stars.push(<Star key={`empty-${i}`} size={14} color="#ccc" />);
+        }
+        return stars;
+    };
+
+    const [cartAdded, setCartAdded] = useState(false);
+
+    const handleAddToCart = async () => {
+        // Build base dimensions for customizable products
+        let baseDims: Record<string, any> | undefined = undefined;
+        if (Number(product?.is_customizable) === 1 && product?.base_dimensions) {
+            let bd = product.base_dimensions;
+            if (typeof bd === 'string') {
+                try { bd = JSON.parse(bd); } catch (e) { bd = {}; }
+            }
+            if (bd && typeof bd === 'object' && Object.keys(bd).length > 0) {
+                baseDims = bd;
+            }
+        }
+
+        const success = await addToCart({
+            id: displayId,
+            // For variant products the listing already resolved the default variant's
+            // image/price into displayImage/displayPrice; pass its id + label too so the
+            // cart line is the proper variant (and shows the variant image), not a
+            // variantless line that falls back to a missing primary image.
+            variant_id: product?.default_variant_id ?? null,
+            variant_label: product?.variant_label,
+            name: baseName,
+            name_ar: product?.name_ar,
+            price: displayPrice,
+            image: displayImage,
+            brand: displayBrand,
+            slug: product?.slug,
+            stock_quantity: product?.stock_quantity,
+            track_inventory: product?.track_inventory,
+            oldPrice: displayOldPrice,
+            custom_dimensions: baseDims || undefined
+        });
+
+        if (success) {
+            setCartAdded(true);
+            setTimeout(() => setCartAdded(false), 1500);
+        }
+    };
+
+    const handleWishlist = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isFav) {
+            removeFromWishlist(displayId);
+        } else {
+            addToWishlist({
+                id: displayId,
+                name: baseName,
+                name_ar: product?.name_ar,
+                price: displayPrice,
+                image: displayImage,
+                brand: displayBrand
+            });
+        }
+    };
+
+    const [logoError, setLogoError] = React.useState(false);
+    const [imageError, setImageError] = React.useState(false);
+
+    return (
+        <div className={styles.productCard}>
+            <div className={styles.imageSection}>
+                <div className={styles.tagsWrapper}>
+                    {isWeeklyDeal && <div className={`${styles.dealTag} ${styles.weeklyTag}`}>{t('weeklyDeal')}</div>}
+                    {isLimitedOffer && <div className={`${styles.dealTag} ${styles.limitedTag}`}>{t('limitedOffer')}</div>}
+                    {isDailyOffer && <div className={`${styles.dealTag} ${styles.dailyTag}`}>{t('dailyOffer')}</div>}
+
+                    {/* Show Top Selling tag if sold_count >= 2 OR manually marked as best seller */}
+                </div>
+
+                {displayDiscount && !isDailyOffer && (
+                    <div className={styles.discountBadgeWrapper}>
+                        <div className={styles.badge}>{displayDiscount}</div>
+                    </div>
+                )}
+
+                <button
+                    className={`${styles.wishlistBtn} ${isFav ? styles.wishlistActive : ''}`}
+                    onClick={handleWishlist}
+                    aria-label={isFav ? "Remove from wishlist" : "Add to wishlist"}
+                >
+                    <Heart size={20} fill={isFav ? "#e31e24" : "none"} color={isFav ? "#e31e24" : "currentColor"} />
+                </button>
+
+                <Link href={`/product/${product?.slug || displayId}`}>
+                    <div className={styles.productImg} style={{ position: 'relative' }}>
+                        <Image
+                            src={imageError ? '/assets/mariot-logo2.webp' : displayImage}
+                            alt={displayModel}
+                            layout="fill"
+                            objectFit="contain"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                            onError={() => setImageError(true)}
+                        />
+                    </div>
+                </Link>
+            </div>
+            <div className={styles.productInfo}>
+                {(isDailyOffer || isLimitedOffer || isWeeklyDeal) && activeTimer && (
+                    <div className={styles.dealSection}>
+                        <div className={styles.innerTimer}>
+                            {t('endingIn')} <span>{formatTime(activeTimer.hours)}h {formatTime(activeTimer.minutes)}m {formatTime(activeTimer.seconds)}s</span>
+                        </div>
+                    </div>
+                )}
+                <div className={styles.ratingBox}>
+                    <div className={styles.stars}>
+                        {renderStars(rating)}
+                    </div>
+                    {reviews > 0 ? (
+                        <span className={styles.reviewCount}>({rating.toFixed(1)}) {reviews} {reviews !== 1 ? t('reviews') : t('review')}</span>
+                    ) : (
+                        <span className={styles.reviewCount}>{t('noReviews')}</span>
+                    )}
+                </div>
+                <span className={styles.modelName}>
+                    {displayModel}
+                </span>
+                <p className={styles.description}>{t('modelLabel')} {product?.model || product?.slug?.toUpperCase() || displayId}</p>
+
+                <Link
+                    href={`/shop?brand=${encodeURIComponent((displayBrand || '').toLowerCase().replaceAll(' ', '-'))}`}
+                    className={styles.brandLogoBox}
+                    style={{ textDecoration: 'none' }}
+                >
+                    <div className={styles.logoBorder}>
+                        {displayBrandImage && !logoError ? (
+                            <img
+                                src={displayBrandImage}
+                                alt={displayBrand || 'Brand'}
+                                className={styles.brandLogoImg}
+                                loading="lazy"
+                                decoding="async"
+                                onError={() => setLogoError(true)}
+                            />
+                        ) : (
+                            <span className={styles.brandText}>{displayBrand}</span>
+                        )}
+                    </div>
+                </Link>
+
+                <div className={styles.priceSection}>
+                    <div className={styles.currentPrice}><CurrencyPrice amount={displayPrice} /></div>
+                    <div className={styles.savingsRow}>
+                        {displayOldPrice > 0 && displayOldPrice > displayPrice && (
+                            <span className={styles.oldPrice}><CurrencyPrice amount={displayOldPrice} /></span>
+                        )}
+                        <span className={styles.discountText}>{displayDiscount}</span>
+                    </div>
+                </div>
+
+                <div className={styles.actionButtons}>
+                    <button
+                        className={styles.whatsappBtn}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const productUrl = typeof window !== 'undefined' ? `${window.location.origin}/product/${product?.slug || displayId}` : '';
+                            const msg = encodeURIComponent(t('whatsappMessage', {
+                                url: productUrl,
+                                name: displayModel,
+                                price: displayPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                                model: product?.model || product?.slug?.toUpperCase() || displayId
+                            }));
+                            window.open(`https://wa.me/97142882777?text=${msg}`, '_blank');
+                        }}
+                    >
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style={{ marginInlineEnd: '4px' }}>
+                            <path d="M12.03 2c-5.52 0-10 4.48-10 10a9.96 9.96 0 0 0 1.53 5.39L2.03 22l4.75-1.25c1.54.85 3.32 1.33 5.25 1.33 5.52 0 10-4.48 10-10S17.55 2 12.03 2zm6.3 14.54c-.27.76-1.55 1.48-2.14 1.57-.59.09-1.34.22-3.83-.82-2.92-1.21-4.74-4.22-4.88-4.42-.15-.2-1.18-1.56-1.18-2.98 0-1.42.74-2.12 1.01-2.4.27-.28.59-.35.79-.35.19 0 .38.01.54.02.17.01.4-.04.62.5.24.59.81 1.99.88 2.14.07.15.11.32.01.52-.09.20-.14.33-.28.5-.14.17-.3.38-.43.51-.15.15-.3.32-.13.62.17.3.74 1.23 1.59 1.99.85.76 1.56 1 1.86 1.15.3.15.47.13.65-.08.18-.21.76-.89.96-1.2.2-.31.4-.26.68-.15.28.11 1.77.84 2.08.99.31.15.51.22.59.35.08.13.08.73-.19 1.48z" />
+                        </svg>
+                        <span>{t('whatsapp')}</span>
+                    </button>
+                    <button
+                        className={styles.cartBtn}
+                        onClick={handleAddToCart}
+                        disabled={cardOutOfStock || cartAdded}
+                        style={{
+                            opacity: cardOutOfStock ? 0.6 : 1,
+                            cursor: cardOutOfStock ? 'not-allowed' : 'pointer',
+                            backgroundColor: cartAdded ? '#28a745' : (cardOutOfStock ? '#999' : '#17a2b8'),
+                            transition: 'background-color 0.3s ease'
+                        }}
+                    >
+                        {!cartAdded && <ShoppingCart size={16} fill="white" />}
+                        <span>{cartAdded ? t('added') : (cardOutOfStock ? t('outOfStock') : t('addToCart'))}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default ProductCard;

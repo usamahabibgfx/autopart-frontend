@@ -1,0 +1,642 @@
+'use client';
+
+import React, { useMemo } from 'react';
+import { Plus, Trash2, X, RefreshCw, Layers, Image as ImageIcon, Upload, Loader2, GripVertical } from 'lucide-react';
+import { API_BASE_URL } from '@/config';
+import styles from './AdminProducts.module.css';
+import { getAuthHeaders } from '@/utils/authHeaders';
+import { resolveUrl } from '@/utils/resolveUrl';
+
+export interface OptionValue {
+    value: string;
+    value_ar: string;
+    swatch_color?: string;
+}
+
+export interface VariantOption {
+    name: string;
+    name_ar: string;
+    values: OptionValue[];
+}
+
+export interface VariantRow {
+    combo: string[];          // value chosen for each option, in option order
+    sku: string;
+    price: string;
+    offer_price: string;
+    stock_quantity: string;
+    use_primary_image: boolean;
+    image_url: string;         // first entry of image_urls — kept for backward compat
+    image_urls: string[];      // multi-image gallery for this variant
+    is_active: boolean;
+    is_default: boolean;
+}
+
+interface Props {
+    enabled: boolean;
+    onEnabledChange: (enabled: boolean) => void;
+    options: VariantOption[];
+    onOptionsChange: (options: VariantOption[]) => void;
+    variants: VariantRow[];
+    onVariantsChange: (variants: VariantRow[]) => void;
+    primaryImage?: string;
+}
+
+const emptyValue = (): OptionValue => ({ value: '', value_ar: '', swatch_color: '' });
+const emptyOption = (): VariantOption => ({ name: '', name_ar: '', values: [emptyValue()] });
+const rowFromCombo = (combo: string[]): VariantRow => ({
+    combo,
+    sku: '',
+    price: '',
+    offer_price: '',
+    stock_quantity: '0',
+    use_primary_image: true,
+    image_url: '',
+    image_urls: [],
+    is_active: true,
+    is_default: false
+});
+
+// Effective key for a value: prefer English, fall back to Arabic
+const effectiveKey = (v: OptionValue) => v.value.trim() || v.value_ar.trim();
+
+// Cartesian product of option values
+function cartesian(options: VariantOption[]): string[][] {
+    if (options.length === 0) return [];
+    const valueLists = options.map(o => o.values.map(effectiveKey).filter(Boolean));
+    if (valueLists.some(list => list.length === 0)) return [];
+    return valueLists.reduce<string[][]>(
+        (acc, list) => acc.flatMap(prefix => list.map(v => [...prefix, v])),
+        [[]]
+    );
+}
+
+function validateOptions(options: VariantOption[]): string | null {
+    if (options.length === 0) return 'Add at least one option (e.g. Color).';
+    for (let i = 0; i < options.length; i++) {
+        const o = options[i];
+        if (!o.name.trim() && !o.name_ar.trim()) return `Option ${i + 1} needs a name.`;
+        const values = o.values.map(effectiveKey).filter(Boolean);
+        if (values.length === 0) return `Option "${o.name || o.name_ar || i + 1}" needs at least one value.`;
+    }
+    return null;
+}
+
+const signatureOf = (combo: string[]) => combo.join('\u0001');
+
+const VariantsEditor: React.FC<Props> = ({
+    enabled, onEnabledChange,
+    options, onOptionsChange,
+    variants, onVariantsChange,
+    primaryImage
+}) => {
+    const [uploadingIdx, setUploadingIdx] = React.useState<number | null>(null);
+    const [regenError, setRegenError] = React.useState<string | null>(null);
+    const [dragInfo, setDragInfo] = React.useState<{ optIdx: number; valIdx: number } | null>(null);
+    const [dragOverIdx, setDragOverIdx] = React.useState<{ optIdx: number; valIdx: number } | null>(null);
+
+    const reorderValue = (optIdx: number, from: number, to: number) => {
+        if (from === to) return;
+        const vals = [...options[optIdx].values];
+        const [moved] = vals.splice(from, 1);
+        vals.splice(to, 0, moved);
+        updateOption(optIdx, { values: vals });
+    };
+
+    const addOption = () => onOptionsChange([...options, emptyOption()]);
+    const removeOption = (idx: number) => {
+        const next = options.filter((_, i) => i !== idx);
+        onOptionsChange(next);
+        // Strip that column from existing variant combos
+        onVariantsChange(variants.map(v => ({ ...v, combo: v.combo.filter((_, i) => i !== idx) })));
+    };
+    const updateOption = (idx: number, patch: Partial<VariantOption>) => {
+        onOptionsChange(options.map((o, i) => i === idx ? { ...o, ...patch } : o));
+    };
+    const addValue = (optIdx: number) => {
+        updateOption(optIdx, { values: [...options[optIdx].values, emptyValue()] });
+    };
+    const removeValue = (optIdx: number, valIdx: number) => {
+        const removedKey = effectiveKey(options[optIdx].values[valIdx]);
+        updateOption(optIdx, { values: options[optIdx].values.filter((_, i) => i !== valIdx) });
+        if (removedKey) {
+            onVariantsChange(variants.filter(v => v.combo[optIdx] !== removedKey));
+        }
+    };
+    const updateValue = (optIdx: number, valIdx: number, patch: Partial<OptionValue>) => {
+        const oldVal = options[optIdx].values[valIdx];
+        const newVal = { ...oldVal, ...patch };
+        const oldKey = effectiveKey(oldVal);
+        const newKey = effectiveKey(newVal);
+        updateOption(optIdx, {
+            values: options[optIdx].values.map((v, i) => i === valIdx ? newVal : v)
+        });
+        // If the effective key changed (rename), rewrite that slot in existing combos
+        // so signatures stay aligned with the variant rows (preserves SKU/price/image).
+        if (oldKey && newKey && oldKey !== newKey) {
+            onVariantsChange(variants.map(v => {
+                if (v.combo[optIdx] !== oldKey) return v;
+                const nextCombo = [...v.combo];
+                nextCombo[optIdx] = newKey;
+                return { ...v, combo: nextCombo };
+            }));
+        }
+    };
+
+    const regenerate = () => {
+        const err = validateOptions(options);
+        if (err) {
+            setRegenError(err);
+            return;
+        }
+        setRegenError(null);
+        const combos = cartesian(options);
+        const bySig = new Map(variants.map(v => [signatureOf(v.combo), v]));
+
+        // Pass 1: exact signature match — keeps data when nothing changed.
+        const usedSigs = new Set<string>();
+        const matched: (VariantRow | null)[] = combos.map(combo => {
+            const sig = signatureOf(combo);
+            const hit = bySig.get(sig);
+            if (hit) { usedSigs.add(sig); return { ...hit, combo }; }
+            return null;
+        });
+
+        // Pass 2: any new combo with no exact match adopts the next unused old
+        // variant in original order. This handles renames (e.g. "120" → "1202")
+        // without losing SKU / price / stock / uploaded image / default flag.
+        const unusedOld = variants.filter(v => !usedSigs.has(signatureOf(v.combo)));
+        let unusedIdx = 0;
+        const next = matched.map((row, i) => {
+            if (row) return row;
+            if (unusedIdx < unusedOld.length) {
+                const old = unusedOld[unusedIdx++];
+                return { ...old, combo: combos[i] };
+            }
+            return rowFromCombo(combos[i]);
+        });
+
+        onVariantsChange(next);
+    };
+
+    const updateVariant = (idx: number, patch: Partial<VariantRow>) => {
+        onVariantsChange(variants.map((v, i) => i === idx ? { ...v, ...patch } : v));
+    };
+
+    const handleImageUpload = async (idx: number, files: FileList) => {
+        if (!files || files.length === 0) return;
+        setUploadingIdx(idx);
+        try {
+            const uploaded: string[] = [];
+            for (const f of Array.from(files)) {
+                const fd = new FormData();
+                fd.append('image', f);
+                const res = await fetch(`${API_BASE_URL}/upload/image`, {
+                    credentials: 'include', method: 'POST',
+                    headers: getAuthHeaders(), body: fd
+                });
+                const data = await res.json();
+                if (data.success && data.data) uploaded.push(data.data);
+            }
+            if (uploaded.length > 0) {
+                const existing = Array.isArray(variants[idx]?.image_urls) ? variants[idx].image_urls : [];
+                const merged = [...existing, ...uploaded];
+                updateVariant(idx, { image_urls: merged, image_url: merged[0] || '', use_primary_image: false });
+            }
+        } catch (e) { console.error(e); }
+        finally { setUploadingIdx(null); }
+    };
+
+    const removeVariantImage = (idx: number, imgIdx: number) => {
+        const existing = Array.isArray(variants[idx]?.image_urls) ? [...variants[idx].image_urls] : [];
+        existing.splice(imgIdx, 1);
+        updateVariant(idx, { image_urls: existing, image_url: existing[0] || '' });
+    };
+
+    const moveVariantImage = (idx: number, from: number, to: number) => {
+        if (from === to) return;
+        const existing = Array.isArray(variants[idx]?.image_urls) ? [...variants[idx].image_urls] : [];
+        if (from < 0 || from >= existing.length || to < 0 || to >= existing.length) return;
+        const [moved] = existing.splice(from, 1);
+        existing.splice(to, 0, moved);
+        updateVariant(idx, { image_urls: existing, image_url: existing[0] || '' });
+    };
+
+    const combosOutOfSync = useMemo(() => {
+        const expected = cartesian(options).map(signatureOf).sort().join(',');
+        const current = variants.map(v => signatureOf(v.combo)).sort().join(',');
+        return expected !== current;
+    }, [options, variants]);
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '14px 16px', background: '#f8fafc',
+                border: '1px solid #e2e8f0', borderRadius: 12
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <Layers size={20} color="#3b82f6" />
+                    <div>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>Enable Variants</div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>
+                            Different combinations of Color, Size, etc. with their own price &amp; stock.
+                        </div>
+                    </div>
+                </div>
+                <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24 }}>
+                    <input
+                        type="checkbox"
+                        checked={enabled}
+                        onChange={(e) => onEnabledChange(e.target.checked)}
+                        style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                        position: 'absolute', inset: 0, cursor: 'pointer',
+                        background: enabled ? '#22c55e' : '#cbd5e1',
+                        borderRadius: 12, transition: '0.2s'
+                    }} />
+                    <span style={{
+                        position: 'absolute', top: 2, left: enabled ? 22 : 2, width: 20, height: 20,
+                        background: 'white', borderRadius: '50%', transition: '0.2s',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                    }} />
+                </label>
+            </div>
+
+            {!enabled ? (
+                <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 13 }}>
+                    Variants are off. Product will sell with the base price and stock from the Pricing tab.
+                </div>
+            ) : (
+                <>
+                    {/* Options */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <h4 style={{ margin: 0, fontSize: 13, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#475569' }}>
+                                Options
+                            </h4>
+                            <button
+                                type="button"
+                                onClick={addOption}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: 6,
+                                    background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe',
+                                    borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                                }}
+                            >
+                                <Plus size={14} /> Add Option
+                            </button>
+                        </div>
+
+                        {options.length === 0 && (
+                            <div style={{ fontSize: 12, color: '#94a3b8', padding: '20px 0', textAlign: 'center' }}>
+                                No options yet. Add one like &ldquo;Color&rdquo; or &ldquo;Size&rdquo;.
+                            </div>
+                        )}
+
+                        {options.map((opt, optIdx) => {
+                        const nameLc = (opt.name || '').trim().toLowerCase();
+                        const nameArTrim = (opt.name_ar || '').trim();
+                        const isColorOption = nameLc === 'color' || nameLc === 'colour' || nameArTrim === 'اللون' || nameArTrim === 'لون';
+                        return (
+                            <div key={optIdx} style={{
+                                border: '1px solid #e2e8f0', borderRadius: 10, padding: 12,
+                                display: 'flex', flexDirection: 'column', gap: 10
+                            }}>
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                    <input
+                                        type="text" placeholder="Option name (e.g. Color)"
+                                        value={opt.name}
+                                        onChange={(e) => updateOption(optIdx, { name: e.target.value })}
+                                        style={{ flex: 1, padding: '8px 10px', fontSize: 13, border: '1px solid #e2e8f0', borderRadius: 8 }}
+                                    />
+                                    <input
+                                        type="text" placeholder="اسم الخيار (بالعربية)" dir="rtl"
+                                        value={opt.name_ar}
+                                        onChange={(e) => updateOption(optIdx, { name_ar: e.target.value })}
+                                        style={{ flex: 1, padding: '8px 10px', fontSize: 13, border: '1px solid #e2e8f0', borderRadius: 8 }}
+                                    />
+                                    <button type="button" onClick={() => removeOption(optIdx)}
+                                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 6 }}>
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                    {opt.values.map((val, valIdx) => {
+                                        const isDragOver = dragOverIdx?.optIdx === optIdx && dragOverIdx.valIdx === valIdx
+                                            && (dragInfo?.optIdx !== optIdx || dragInfo?.valIdx !== valIdx);
+                                        return (
+                                        <div
+                                            key={valIdx}
+                                            onDragOver={(e) => {
+                                                if (dragInfo?.optIdx !== optIdx) return;
+                                                e.preventDefault();
+                                                e.dataTransfer.dropEffect = 'move';
+                                                setDragOverIdx({ optIdx, valIdx });
+                                            }}
+                                            onDragLeave={() => {
+                                                if (dragOverIdx?.optIdx === optIdx && dragOverIdx.valIdx === valIdx) setDragOverIdx(null);
+                                            }}
+                                            onDrop={(e) => {
+                                                e.preventDefault();
+                                                if (dragInfo && dragInfo.optIdx === optIdx) {
+                                                    reorderValue(optIdx, dragInfo.valIdx, valIdx);
+                                                }
+                                                setDragInfo(null);
+                                                setDragOverIdx(null);
+                                            }}
+                                            style={{
+                                                display: 'flex', gap: 4, alignItems: 'center',
+                                                background: isDragOver ? '#eff6ff' : '#f8fafc',
+                                                border: `1px solid ${isDragOver ? '#3b82f6' : '#e2e8f0'}`,
+                                                borderRadius: 8, padding: 4,
+                                                opacity: dragInfo?.optIdx === optIdx && dragInfo.valIdx === valIdx ? 0.4 : 1,
+                                                transition: 'background 0.1s, border-color 0.1s, opacity 0.1s'
+                                            }}>
+                                            <span
+                                                draggable
+                                                onDragStart={(e) => {
+                                                    setDragInfo({ optIdx, valIdx });
+                                                    e.dataTransfer.effectAllowed = 'move';
+                                                    try { e.dataTransfer.setData('text/plain', String(valIdx)); } catch { /* noop */ }
+                                                }}
+                                                onDragEnd={() => { setDragInfo(null); setDragOverIdx(null); }}
+                                                title="Drag to reorder"
+                                                style={{
+                                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                    cursor: 'grab', color: '#475569',
+                                                    background: '#e2e8f0', borderRadius: 4,
+                                                    width: 18, height: 22, marginRight: 2
+                                                }}>
+                                                <GripVertical size={14} />
+                                            </span>
+                                            <input
+                                                type="text" placeholder="Value (e.g. Red)"
+                                                value={val.value}
+                                                onChange={(e) => updateValue(optIdx, valIdx, { value: e.target.value })}
+                                                style={{ width: 110, padding: '4px 6px', fontSize: 12, border: 'none', background: 'transparent' }}
+                                            />
+                                            <input
+                                                type="text" placeholder="عربي" dir="rtl"
+                                                value={val.value_ar}
+                                                onChange={(e) => updateValue(optIdx, valIdx, { value_ar: e.target.value })}
+                                                style={{ width: 80, padding: '4px 6px', fontSize: 12, border: 'none', background: 'transparent' }}
+                                            />
+                                            {isColorOption && (
+                                            <label
+                                                title="Pick a swatch color (shows as a colored circle on the product page)"
+                                                style={{
+                                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                    width: 26, height: 26, borderRadius: '50%', cursor: 'pointer',
+                                                    border: val.swatch_color ? '1px solid #cbd5e1' : '1px dashed #cbd5e1',
+                                                    background: val.swatch_color || 'repeating-conic-gradient(#e2e8f0 0% 25%, #ffffff 0% 50%) 50% / 8px 8px',
+                                                    position: 'relative', overflow: 'hidden'
+                                                }}
+                                            >
+                                                <input
+                                                    type="color"
+                                                    value={val.swatch_color || '#ffffff'}
+                                                    onChange={(e) => updateValue(optIdx, valIdx, { swatch_color: e.target.value })}
+                                                    style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', border: 'none', padding: 0 }}
+                                                />
+                                            </label>
+                                            )}
+                                            {isColorOption && val.swatch_color && (
+                                                <button type="button"
+                                                    title="Clear swatch color"
+                                                    onClick={() => updateValue(optIdx, valIdx, { swatch_color: '' })}
+                                                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 2, fontSize: 10 }}>
+                                                    ⌀
+                                                </button>
+                                            )}
+                                            <button type="button" onClick={() => removeValue(optIdx, valIdx)}
+                                                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 2 }}>
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                        );
+                                    })}
+                                    <button type="button" onClick={() => addValue(optIdx)}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: 4,
+                                            background: 'white', border: '1px dashed #cbd5e1', borderRadius: 8,
+                                            padding: '6px 10px', fontSize: 12, color: '#64748b', cursor: 'pointer'
+                                        }}>
+                                        <Plus size={12} /> Value
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                        })}
+                    </div>
+
+                    {/* Combinations */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <h4 style={{ margin: 0, fontSize: 13, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#475569' }}>
+                                Combinations ({variants.length})
+                            </h4>
+                            <button
+                                type="button"
+                                onClick={regenerate}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: 6,
+                                    background: combosOutOfSync ? '#fef3c7' : '#f1f5f9',
+                                    color: combosOutOfSync ? '#b45309' : '#475569',
+                                    border: `1px solid ${combosOutOfSync ? '#fcd34d' : '#cbd5e1'}`,
+                                    borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                                }}
+                            >
+                                <RefreshCw size={14} /> {combosOutOfSync ? 'Regenerate (out of sync)' : 'Regenerate'}
+                            </button>
+                        </div>
+
+                        {regenError && (
+                            <div style={{
+                                background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c',
+                                borderRadius: 8, padding: '8px 12px', fontSize: 12
+                            }}>
+                                {regenError}
+                            </div>
+                        )}
+
+                        {variants.length === 0 ? (
+                            <div style={{ fontSize: 12, color: '#94a3b8', padding: '20px 0', textAlign: 'center' }}>
+                                Add option values, then click Regenerate to build the combination grid.
+                            </div>
+                        ) : (
+                            <div className={styles.noScrollbar} style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 10 }}>
+                                <table style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse', fontSize: 12 }}>
+                                    <thead>
+                                        <tr style={{ background: '#f8fafc' }}>
+                                            {options.map((o, i) => (
+                                                <th key={i} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#475569', whiteSpace: 'nowrap' }}>
+                                                    {o.name || `Option ${i + 1}`}
+                                                </th>
+                                            ))}
+                                            <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#475569' }}>SKU</th>
+                                            <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#475569' }}>Price</th>
+                                            <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#475569' }}>Offer</th>
+                                            <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#475569' }}>Stock</th>
+                                            <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#475569' }}>Image</th>
+                                            <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#475569' }}>Default</th>
+                                            <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#475569' }}>Active</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {variants.map((v, idx) => (
+                                            <tr key={idx} style={{ borderTop: '1px solid #f1f5f9' }}>
+                                                {v.combo.map((val, i) => (
+                                                    <td key={i} style={{ padding: '10px 12px', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>
+                                                        {val}
+                                                    </td>
+                                                ))}
+                                                <td style={{ padding: 6 }}>
+                                                    <input type="text" value={v.sku}
+                                                        onChange={(e) => updateVariant(idx, { sku: e.target.value })}
+                                                        placeholder="SKU"
+                                                        style={{ width: 110, padding: '6px 8px', fontSize: 12, border: '1px solid #e2e8f0', borderRadius: 6 }} />
+                                                </td>
+                                                <td style={{ padding: 6 }}>
+                                                    <input type="number" step="0.01" value={v.price}
+                                                        onChange={(e) => updateVariant(idx, { price: e.target.value })}
+                                                        style={{ width: 90, padding: '6px 8px', fontSize: 12, border: '1px solid #e2e8f0', borderRadius: 6 }} />
+                                                </td>
+                                                <td style={{ padding: 6 }}>
+                                                    <input type="number" step="0.01" value={v.offer_price}
+                                                        onChange={(e) => updateVariant(idx, { offer_price: e.target.value })}
+                                                        placeholder="—"
+                                                        style={{ width: 90, padding: '6px 8px', fontSize: 12, border: '1px solid #e2e8f0', borderRadius: 6 }} />
+                                                </td>
+                                                <td style={{ padding: 6 }}>
+                                                    <input type="number" value={v.stock_quantity}
+                                                        onChange={(e) => updateVariant(idx, { stock_quantity: e.target.value })}
+                                                        style={{ width: 70, padding: '6px 8px', fontSize: 12, border: '1px solid #e2e8f0', borderRadius: 6 }} />
+                                                </td>
+                                                <td style={{ padding: 6, minWidth: 260 }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                                            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#475569', cursor: 'pointer' }}>
+                                                                <input type="radio" checked={v.use_primary_image}
+                                                                    onChange={() => updateVariant(idx, { use_primary_image: true })} />
+                                                                Primary
+                                                            </label>
+                                                            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#475569', cursor: 'pointer' }}>
+                                                                <input type="radio" checked={!v.use_primary_image}
+                                                                    onChange={() => updateVariant(idx, { use_primary_image: false })} />
+                                                                Custom gallery
+                                                            </label>
+                                                        </div>
+
+                                                        {v.use_primary_image ? (
+                                                            <div style={{
+                                                                width: 48, height: 48, borderRadius: 6, overflow: 'hidden',
+                                                                background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                            }}>
+                                                                {(() => {
+                                                                    const resolved = resolveUrl(primaryImage);
+                                                                    return resolved
+                                                                        ? <img src={resolved} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).src = '/assets/placeholder-image.webp'; }} />
+                                                                        : <img src="/assets/placeholder-image.webp" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+                                                                })()}
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                                                {(v.image_urls || []).map((url, imgIdx) => {
+                                                                    const resolved = resolveUrl(url);
+                                                                    const isMain = imgIdx === 0;
+                                                                    return (
+                                                                        <div key={`${url}-${imgIdx}`} style={{
+                                                                            position: 'relative', width: 56, height: 56, borderRadius: 6,
+                                                                            border: isMain ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                                                                            overflow: 'hidden', background: '#f8fafc'
+                                                                        }} title={isMain ? 'Main (shown in listings)' : 'Gallery image'}>
+                                                                            <img src={resolved || '/assets/placeholder-image.webp'} alt=""
+                                                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                                                onError={(e) => { (e.target as HTMLImageElement).src = '/assets/placeholder-image.webp'; }} />
+                                                                            <button type="button"
+                                                                                onClick={() => removeVariantImage(idx, imgIdx)}
+                                                                                title="Remove"
+                                                                                style={{
+                                                                                    position: 'absolute', top: 2, right: 2,
+                                                                                    width: 18, height: 18, borderRadius: '50%',
+                                                                                    background: 'rgba(15,23,42,0.7)', color: 'white',
+                                                                                    border: 'none', cursor: 'pointer',
+                                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0
+                                                                                }}>
+                                                                                <X size={12} />
+                                                                            </button>
+                                                                            {(v.image_urls?.length || 0) > 1 && (
+                                                                                <div style={{
+                                                                                    position: 'absolute', bottom: 2, left: 2, right: 2,
+                                                                                    display: 'flex', gap: 2, justifyContent: 'space-between'
+                                                                                }}>
+                                                                                    <button type="button"
+                                                                                        onClick={() => moveVariantImage(idx, imgIdx, imgIdx - 1)}
+                                                                                        disabled={imgIdx === 0}
+                                                                                        title="Move left"
+                                                                                        style={{
+                                                                                            width: 16, height: 16, borderRadius: 3, border: 'none',
+                                                                                            background: 'rgba(15,23,42,0.7)', color: 'white',
+                                                                                            cursor: imgIdx === 0 ? 'default' : 'pointer',
+                                                                                            opacity: imgIdx === 0 ? 0.4 : 1, fontSize: 9, padding: 0
+                                                                                        }}>‹</button>
+                                                                                    <button type="button"
+                                                                                        onClick={() => moveVariantImage(idx, imgIdx, imgIdx + 1)}
+                                                                                        disabled={imgIdx >= (v.image_urls?.length || 0) - 1}
+                                                                                        title="Move right"
+                                                                                        style={{
+                                                                                            width: 16, height: 16, borderRadius: 3, border: 'none',
+                                                                                            background: 'rgba(15,23,42,0.7)', color: 'white',
+                                                                                            cursor: imgIdx >= (v.image_urls?.length || 0) - 1 ? 'default' : 'pointer',
+                                                                                            opacity: imgIdx >= (v.image_urls?.length || 0) - 1 ? 0.4 : 1, fontSize: 9, padding: 0
+                                                                                        }}>›</button>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                                <label style={{
+                                                                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                                                    width: 56, height: 56, borderRadius: 6,
+                                                                    border: '1px dashed #cbd5e1', cursor: 'pointer',
+                                                                    background: '#f8fafc', color: '#64748b', fontSize: 10
+                                                                }}>
+                                                                    {uploadingIdx === idx ? <Loader2 size={16} className="spin" /> : <Upload size={16} />}
+                                                                    <span>{uploadingIdx === idx ? '...' : 'Add'}</span>
+                                                                    <input type="file" accept="image/*" multiple
+                                                                        onChange={(e) => { if (e.target.files && e.target.files.length > 0) handleImageUpload(idx, e.target.files); e.target.value = ''; }}
+                                                                        style={{ display: 'none' }} />
+                                                                </label>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: 6, textAlign: 'center' }}>
+                                                    <input
+                                                        type="radio"
+                                                        name="variant_default"
+                                                        checked={v.is_default}
+                                                        onChange={() => onVariantsChange(variants.map((r, i) => ({ ...r, is_default: i === idx })))}
+                                                        title="Set as default selection"
+                                                    />
+                                                </td>
+                                                <td style={{ padding: 6, textAlign: 'center' }}>
+                                                    <input type="checkbox" checked={v.is_active}
+                                                        onChange={(e) => updateVariant(idx, { is_active: e.target.checked })} />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
+
+export default VariantsEditor;

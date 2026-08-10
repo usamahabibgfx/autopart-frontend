@@ -1,0 +1,197 @@
+'use client';
+
+import React from 'react';
+import styles from './Filters.module.css';
+import { Filter, ChevronDown } from 'lucide-react';
+import { FilterProps } from './FilterTypes';
+import { useTranslations, useLocale } from 'next-intl';
+import { BASE_URL } from '@/config';
+
+const FilterCategory: React.FC<FilterProps> = ({
+    inStockOnly,
+    setInStockOnly,
+    brands,
+    selectedBrands,
+    handleBrandToggle,
+    allCategories,
+    subCategories,
+    activeCategory,
+    minPrice,
+    setMinPrice,
+    maxPrice,
+    setMaxPrice,
+    resetFilters,
+    toggleSection,
+    expandedSections,
+    onCategoryChange,
+    selectedSubCategories = [],
+    onSubCategoryToggle,
+}) => {
+    const t = useTranslations('categoryContent');
+    const locale = useLocale();
+    const isArabic = locale === 'ar';
+
+    const resolveUrl = (url?: string) => {
+        if (!url) return '';
+        if (url.includes('127.0.0.1:5000')) {
+            return url.replace('http://127.0.0.1:5000', BASE_URL);
+        }
+        if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('/assets/')) return url;
+        return `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+    };
+
+    return (
+        <aside className={styles.sidebar}>
+            <div className={styles.filterHeader}>
+                <div className={styles.filterTitle}>
+                    <Filter size={18} />
+                    <h2>{t('filter').toUpperCase()}</h2>
+                </div>
+                <button className={styles.resetBtn} onClick={resetFilters}>
+                    {t('reset') || 'Reset'}
+                </button>
+            </div>
+
+            {/* AVAILABILITY */}
+            <div className={styles.filterSection}>
+                <div className={styles.sectionHeader} onClick={() => toggleSection('stock')}>
+                    <h3>{t('availability') || 'Availability'}</h3>
+                    <ChevronDown size={14} className={expandedSections.includes('stock') ? styles.rotateIcon : styles.collapsedIcon} />
+                </div>
+                {expandedSections.includes('stock') && (
+                    <div className={styles.sectionContent}>
+                        <label className={styles.checkboxLabel}>
+                            <input type="checkbox" checked={inStockOnly} onChange={(e) => setInStockOnly(e.target.checked)} />
+                            <span>{t('in-stock-only') || 'In Stock Only'}</span>
+                        </label>
+                    </div>
+                )}
+            </div>
+
+            {/* CATEGORIES — kept here so users can switch category in place from the
+                filter (consistent with the shop / brand pages), instead of feeling
+                like a full page change. */}
+            <div className={styles.filterSection}>
+                <div className={styles.sectionHeader} onClick={() => toggleSection('categories')}>
+                    <h3>{t('categories') || 'Product Categories'}</h3>
+                    <ChevronDown size={14} className={expandedSections.includes('categories') ? styles.rotateIcon : styles.collapsedIcon} />
+                </div>
+                {expandedSections.includes('categories') && (
+                    <div className={styles.sectionContent}>
+                        {(() => {
+                        // On a main-category page, scope the list to that category's
+                        // sub-categories instead of every top-level category.
+                        const categoryList = (subCategories && subCategories.length > 0) ? subCategories : allCategories;
+                        return categoryList.length > 0 ? (
+                            categoryList.map(cat => (
+                                <label key={cat.id} className={styles.checkboxLabel}>
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedSubCategories.includes(cat.slug)}
+                                        onChange={() => onSubCategoryToggle?.(cat.slug)}
+                                    />
+                                    <span><span>{isArabic && cat.name_ar ? cat.name_ar : cat.name}</span></span>
+                                </label>
+                            ))
+                        ) : (
+                            <p style={{ fontSize: '12px', color: '#999' }}>{t('no-categories-found')}</p>
+                        );
+                        })()}
+                    </div>
+                )}
+            </div>
+
+            {/* BRANDS IN THIS CATEGORY */}
+            {brands.length > 0 && (
+                <div className={styles.filterSection}>
+                    <div className={styles.sectionHeader} onClick={() => toggleSection('brand')}>
+                        <h3>{t('brand') || 'Brand'}</h3>
+                        <ChevronDown size={14} className={expandedSections.includes('brand') ? styles.rotateIcon : styles.collapsedIcon} />
+                    </div>
+                    {expandedSections.includes('brand') && (
+                        <div className={styles.sectionContent}>
+                            <div className={styles.brandGrid}>
+                                {brands.map(brand => (
+                                    <div
+                                        key={brand.id}
+                                        onClick={() => handleBrandToggle(brand.slug)}
+                                        className={`${styles.brandLogoCard} ${selectedBrands.includes(brand.slug) ? styles.brandLogoCardActive : ''}`}
+                                    >
+                                        {brand.image_url ? (
+                                            <img
+                                                src={resolveUrl(brand.image_url)}
+                                                alt={isArabic && brand.name_ar ? brand.name_ar : brand.name}
+                                                className={styles.brandLogoImg}
+                                                onError={(e) => {
+                                                    const target = e.target as HTMLImageElement;
+                                                    target.style.display = 'none';
+                                                    target.nextElementSibling?.setAttribute('style', 'display: block');
+                                                }}
+                                            />
+                                        ) : null}
+                                        <span
+                                            className={styles.brandLogoFallback}
+                                            style={brand.image_url ? { display: 'none' } : {}}
+                                        >
+                                            {isArabic && brand.name_ar ? brand.name_ar : brand.name}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* PRICE */}
+            <div className={styles.filterSection}>
+                <div className={styles.sectionHeader} onClick={() => toggleSection('price')}>
+                    <h3>{t('price-aed') || 'Price (AED)'}</h3>
+                    <ChevronDown size={14} className={expandedSections.includes('price') ? styles.rotateIcon : styles.collapsedIcon} />
+                </div>
+                {expandedSections.includes('price') && (
+                    <div className={styles.sectionContent}>
+                        <div className={styles.priceInputs}>
+                            <div className={styles.priceField}>
+                                <span>{t('from') || 'From'}</span>
+                                <input type="number" value={minPrice} onChange={(e) => setMinPrice(Number(e.target.value))} />
+                            </div>
+                            <div className={styles.priceField}>
+                                <span>{t('to') || 'To'}</span>
+                                <input type="number" value={maxPrice} onChange={(e) => setMaxPrice(Number(e.target.value))} />
+                            </div>
+                        </div>
+                        <div className={styles.sliderContainer}>
+                            <div className={styles.sliderBase}></div>
+                            <div
+                                className={styles.sliderProgress}
+                                style={{
+                                    insetInlineStart: `${(minPrice / 100000) * 100}%`,
+                                    insetInlineEnd: `${100 - (maxPrice / 100000) * 100}%`
+                                }}
+                            ></div>
+                            <input
+                                type="range"
+                                min="0"
+                                max="100000"
+                                value={minPrice}
+                                onChange={(e) => setMinPrice(Math.min(Number(e.target.value), maxPrice - 100))}
+                                className={styles.rangeInput}
+                            />
+                            <input
+                                type="range"
+                                min="0"
+                                max="100000"
+                                value={maxPrice}
+                                onChange={(e) => setMaxPrice(Math.max(Number(e.target.value), minPrice + 100))}
+                                className={styles.rangeInput}
+                            />
+                        </div>
+                    </div>
+                )}
+            </div>
+        </aside>
+    );
+};
+
+export default FilterCategory;
